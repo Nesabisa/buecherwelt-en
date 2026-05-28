@@ -364,7 +364,8 @@ async function fetchGenreSuggestions(stats) {
     ));
     top = [...fromBooks].slice(0,3);
   }
-  if (!top.length) return [];
+  // Fallback: beliebte deutsche Genres wenn noch keine Daten vorhanden
+  if (!top.length) top = ['Krimi', 'Liebesroman', 'Thriller'];
   return await fetchBooksForGenre(genreForApi(top[0]), top[0]);
 }
 
@@ -988,11 +989,6 @@ async function loadSuggestionsForGenre(genre) {
   try {
     let books;
     if (!genre) {
-      if (!Object.keys(S.genreStats||{}).length) {
-        hint.textContent = 'Bewerte Bücher mit 💚 für automatische Empfehlungen!';
-        sug.innerHTML = '<p class="disc-empty">Noch keine Bewertungen vorhanden.</p>';
-        return;
-      }
       books = await fetchGenreSuggestions(S.genreStats);
     } else if (genre === 'NYT-Bestseller') {
       books = await fetchNYTBestsellers();
