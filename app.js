@@ -1,81 +1,76 @@
 /* ===== CONSTANTS ===== */
 const SUGGESTED_AUTHORS = [
-  'Charlotte Link','Hera Lind','Diana Gabaldon',
-  'Jodi Picoult','Guillaume Musso','Karen Swan','Joy Fielding',
+  'Sadhguru', 'Rick Rubin', 'Malcolm Gladwell',
+  'James Clear', 'Ryan Holiday', 'Mark Manson', 'Yuval Noah Harari',
 ];
 // Genres that are too generic to be useful for recommendations
 const SKIP_GENRES = new Set(['Fiction','Juvenile Fiction','Nonfiction','Juvenile Nonfiction',
   'Literary Collections','Literary Criticism','General','Short Stories','Classics']);
 
-// German genre name → API query. "NEW:" prefix = free-text + orderBy=newest + langRestrict=de
+// Genre name → API query
 const GENRE_API_MAP = {
-  'Liebesroman':         'romance Liebesroman',
-  'Historischer Roman':  'historical fiction Historischer Roman',
-  'Krimi':               'Krimi Kriminalroman crime',
-  'Kriminalroman':       'Kriminalroman crime detective',
-  'Thriller':            'Thriller suspense',
-  'Biografie':           'Biografie biography memoir',
-  'Humor':               'Humor comedy',
-  'Science Fiction':     'Science Fiction',
-  'Fantasy':             'Fantasy',
-  'Drama':               'Drama Roman',
-  'Abenteuer':           'Abenteuer adventure',
-  'Horror':              'Horror',
-  'Romantasy':           'Romantasy romantic fantasy',
-  'Spiegel-Bestseller':  'NEW:Spiegel Bestseller Roman',
-  'Neuerscheinungen':    'NEW:Roman Neuerscheinung',
+  'Self-Help':       'self help personal development',
+  'Spirituality':    'spirituality mindfulness consciousness',
+  'Psychology':      'psychology behavior mind',
+  'Business':        'business entrepreneurship leadership',
+  'Philosophy':      'philosophy stoicism wisdom',
+  'History':         'history civilization world',
+  'Science':         'science popular physics biology',
+  'Biography':       'biography memoir autobiography',
+  'Thriller':        'thriller suspense crime',
+  'Mystery':         'mystery detective crime',
+  'Fantasy':         'fantasy epic magic',
+  'Sci-Fi':          'science fiction future space',
+  'Horror':          'horror supernatural dark',
+  'Adventure':       'adventure travel exploration',
+  'New Releases':    'NEW:bestseller nonfiction',
+  'NYT-Bestseller':  'NYT-Bestseller',
 };
-// English genre names from Google Books API categories → mapped to API query
 const GENRE_EN_MAP = {
-  'Romance':                   'romance Liebesroman',
-  'Crime Fiction':              'Krimi crime',
-  'Mystery & Detective':        'Krimi mystery detective',
-  'Mystery':                    'Krimi mystery',
-  'Thriller':                   'Thriller suspense',
-  'Historical Fiction':         'Historischer Roman historical fiction',
-  'Biography & Autobiography':  'Biografie biography',
-  'History':                    'Geschichte history',
-  'Science Fiction':            'Science Fiction',
-  'Fantasy':                    'Fantasy',
-  'Horror':                     'Horror',
-  'Humor':                      'Humor comedy',
-  'Adventure':                  'Abenteuer adventure',
-  'Drama':                      'Drama Roman',
-  'Literary Fiction':           'Roman Literatur',
-  "Women's Fiction":            'Frauenroman romance',
-  'Suspense':                   'Thriller suspense',
-  'Love Stories':               'Liebesroman romance',
+  'Self-Help':                 'self help personal development',
+  'Body, Mind & Spirit':       'spirituality mindfulness consciousness',
+  'Psychology':                'psychology behavior mind',
+  'Business & Economics':      'business entrepreneurship leadership',
+  'Philosophy':                'philosophy stoicism wisdom',
+  'History':                   'history civilization',
+  'Science':                   'science popular',
+  'Biography & Autobiography': 'biography memoir',
+  'True Crime':                'true crime',
+  'Thriller':                  'thriller suspense',
+  'Mystery & Detective':       'mystery detective',
+  'Fantasy':                   'fantasy epic',
+  'Science Fiction':           'science fiction',
+  'Horror':                    'horror supernatural',
+  'Adventure':                 'adventure travel',
+  'Music':                     'music creativity',
+  'Sports & Recreation':       'sports athletes',
+  'Literary Fiction':          'literary fiction',
 };
 function genreForApi(g) { return GENRE_API_MAP[g] || GENRE_EN_MAP[g] || g; }
 
-// Curated German-market bestseller authors per genre → used instead of subject: searches
-// Keys cover both German genre names AND English Google Books category names
-// Arrays of authors per genre — queried individually (OR doesn't work in Google Books API)
+// Curated international authors per genre
 const GENRE_AUTHORS = {
-  'Krimi':               ['Sebastian Fitzek', 'Nele Neuhaus', 'Ursula Poznanski'],
-  'Kriminalroman':       ['Sebastian Fitzek', 'Nele Neuhaus', 'Jan Seghers'],
-  'Crime Fiction':       ['Sebastian Fitzek', 'Nele Neuhaus', 'Ursula Poznanski'],
-  'Mystery & Detective': ['Nele Neuhaus', 'Sebastian Fitzek', 'Petra Hammesfahr'],
-  'Mystery':             ['Nele Neuhaus', 'Sebastian Fitzek', 'Ursula Poznanski'],
-  'Thriller':            ['Sebastian Fitzek', 'Marc Elsberg', 'Arno Strobel'],
-  'Suspense':            ['Sebastian Fitzek', 'Marc Elsberg', 'Andreas Winkelmann'],
-  'Liebesroman':         ['Dora Heldt', 'Nicolas Barreau', 'Rosamunde Pilcher'],
-  'Romance':             ['Dora Heldt', 'Nicolas Barreau', 'Cecelia Ahern'],
-  'Love Stories':        ['Dora Heldt', 'Nicolas Barreau', 'Cecelia Ahern'],
-  "Women's Fiction":     ['Dora Heldt', 'Ildikó von Kürthy', 'Jojo Moyes'],
-  'Historischer Roman':  ['Rebecca Gablé', 'Petra Durst-Benning', 'Ken Follett'],
-  'Historical Fiction':  ['Rebecca Gablé', 'Petra Durst-Benning', 'Tanja Kinkel'],
-  'Fantasy':             ['Markus Heitz', 'Bernhard Hennen', 'Wolfgang Hohlbein'],
-  'Romantasy':           ['Sarah J. Maas', 'Jennifer L. Armentrout', 'Rebecca Ross'],
-  'Science Fiction':     ['Andreas Eschbach', 'Frank Schätzing', 'Marc Elsberg'],
-  'Horror':              ['Sebastian Fitzek', 'Stephen King', 'John Katzenbach'],
-  'Humor':               ['Dora Heldt', 'Bastian Sick', 'Hape Kerkeling'],
-  'Drama':               ['Jojo Moyes', 'Cecelia Ahern', 'Lucinda Riley'],
-  'Literary Fiction':    ['Daniel Kehlmann', 'Ferdinand von Schirach', 'Juli Zeh'],
-  'Abenteuer':           ['Frank Schätzing', 'Ken Follett', 'Andreas Eschbach'],
-  'Adventure':           ['Frank Schätzing', 'Ken Follett', 'Andreas Eschbach'],
-  'Biografie':           ['Hape Kerkeling', 'Michelle Obama', 'Ferdinand von Schirach'],
-  'Biography & Autobiography': ['Hape Kerkeling', 'Michelle Obama', 'Reinhold Messner'],
+  'Self-Help':                 ['James Clear', 'Mark Manson', 'Ryan Holiday'],
+  'Spirituality':              ['Sadhguru', 'Eckhart Tolle', 'Thich Nhat Hanh'],
+  'Body, Mind & Spirit':       ['Sadhguru', 'Eckhart Tolle', 'Deepak Chopra'],
+  'Psychology':                ['Daniel Kahneman', 'Robert Cialdini', 'Jordan Peterson'],
+  'Business':                  ['Malcolm Gladwell', 'Adam Grant', 'Simon Sinek'],
+  'Business & Economics':      ['Malcolm Gladwell', 'Adam Grant', 'Simon Sinek'],
+  'Philosophy':                ['Ryan Holiday', 'Alain de Botton', 'Naval Ravikant'],
+  'History':                   ['Yuval Noah Harari', 'Robert Greene', 'Nassim Taleb'],
+  'Science':                   ['Carl Sagan', 'Richard Dawkins', 'Bill Bryson'],
+  'Biography':                 ['Walter Isaacson', 'Robert Caro', 'David Grann'],
+  'Biography & Autobiography': ['Walter Isaacson', 'David Grann', 'Erik Larson'],
+  'Music':                     ['Rick Rubin', 'Bruce Springsteen', 'Bob Dylan'],
+  'Thriller':                  ['Gillian Flynn', 'Dennis Lehane', 'Lee Child'],
+  'Mystery':                   ['Tana French', 'Michael Connelly', 'James Patterson'],
+  'Mystery & Detective':       ['Tana French', 'Michael Connelly', 'Gillian Flynn'],
+  'Fantasy':                   ['Brandon Sanderson', 'Patrick Rothfuss', 'Joe Abercrombie'],
+  'Science Fiction':           ['Andy Weir', 'Liu Cixin', 'Isaac Asimov'],
+  'Sci-Fi':                    ['Andy Weir', 'Liu Cixin', 'Blake Crouch'],
+  'Horror':                    ['Stephen King', 'Paul Tremblay', 'Josh Malerman'],
+  'Adventure':                 ['Jon Krakauer', 'Sebastian Junger', 'Erik Larson'],
+  'Literary Fiction':          ['Cormac McCarthy', 'Don DeLillo', 'Jeffrey Eugenides'],
 };
 
 /* ===== STATE ===== */
@@ -141,7 +136,7 @@ function startDeleteAuthor(authorId, name) {
   _deletePending = { authorId, author: S.authors.find(a=>a.id===authorId), books: S.books[authorId]||[] };
   S.authors = S.authors.filter(a=>a.id!==authorId);
   delete S.books[authorId];
-  renderAutoren(); renderAlleBuecher(); renderFavoriten();
+  renderAutoren(); renderAlleBuecher(); renderFavorites();
   showDeleteToast(name);
   _deleteTimer = setTimeout(commitDelete, 5000);
 }
@@ -153,7 +148,7 @@ function undoDelete() {
   S.books[_deletePending.authorId] = _deletePending.books;
   _deletePending = null;
   hideDeleteToast();
-  renderAutoren(); renderAlleBuecher(); renderFavoriten();
+  renderAutoren(); renderAlleBuecher(); renderFavorites();
 }
 
 async function commitDelete() {
@@ -189,7 +184,7 @@ function debouncedInlineAuthorSearch(v) {
   if (clear) clear.classList.toggle('hidden', !v.trim());
   if (!v.trim()) { res.classList.add('hidden'); res.innerHTML=''; return; }
   res.classList.remove('hidden');
-  res.innerHTML = '<p class="btr-status">Suche …</p>';
+  res.innerHTML = '<p class="btr-status">Searching …</p>';
   clearTimeout(_inlineAuthorTimer);
   _inlineAuthorTimer = setTimeout(() => _doInlineAuthorSearch(v.trim()), 420);
 }
@@ -222,7 +217,7 @@ async function _doInlineAuthorSearch(q) {
       addAuthor(btn.dataset.name, btn.dataset.img || null);
       clearInlineAuthorSearch();
     };
-  } catch { res.innerHTML = '<p class="btr-status">Fehler – bitte nochmal versuchen.</p>'; }
+  } catch { res.innerHTML = '<p class="btr-status">Error – please try again.</p>'; }
 }
 
 function clearInlineAuthorSearch() {
@@ -247,7 +242,7 @@ function renderInlineSuggestedChips() {
       <span class="chip-sep"></span>
       <span class="chip-x" onclick="event.stopPropagation();dismissSuggestedAuthor('${esc(name)}')">✕</span>
     </button>`;
-  }).join('') + (hasDismissed ? `<button class="author-tips-reset" onclick="resetDismissedAuthors()">Zurücksetzen</button>` : '');
+  }).join('') + (hasDismissed ? `<button class="author-tips-reset" onclick="resetDismissedAuthors()">Reset</button>` : '');
   container.onclick = e => {
     if (e.target.classList.contains('chip-x')) return;
     const btn = e.target.closest('button[data-name]');
@@ -311,7 +306,7 @@ async function fetchBooksForGenre(apiQuery, genreName = '') {
     // Query each author individually (OR doesn't work in Google Books API), merge + dedupe
     const results = await Promise.all(
       authors.slice(0, 3).map(name =>
-        fetchJson(`${API}?q=inauthor:${encodeURIComponent('"'+name+'"')}&langRestrict=de&orderBy=newest&maxResults=15`)
+        fetchJson(`${API}?q=inauthor:${encodeURIComponent('"'+name+'"')}&orderBy=newest&maxResults=15`)
           .then(d => d.items || []).catch(() => [])
       )
     );
@@ -332,7 +327,7 @@ async function fetchBooksForGenre(apiQuery, genreName = '') {
 
   let url, filterYear = false;
   if (apiQuery.startsWith('NEW:')) {
-    url = `${API}?q=${encodeURIComponent(apiQuery.slice(4))}&maxResults=40&orderBy=newest&langRestrict=de`;
+    url = `${API}?q=${encodeURIComponent(apiQuery.slice(4))}&maxResults=40&orderBy=newest`;
     filterYear = true;
   } else {
     url = `${API}?q=subject:${encodeURIComponent(apiQuery)}&maxResults=40&orderBy=relevance`;
@@ -365,7 +360,7 @@ async function fetchGenreSuggestions(stats) {
     top = [...fromBooks].slice(0,3);
   }
   // Fallback: beliebte deutsche Genres wenn noch keine Daten vorhanden
-  if (!top.length) top = ['Krimi', 'Liebesroman', 'Thriller'];
+  if (!top.length) top = ['Self-Help', 'Thriller', 'Biography'];
   return await fetchBooksForGenre(genreForApi(top[0]), top[0]);
 }
 
@@ -376,7 +371,7 @@ function onBookTitleInput(v) {
   const res = document.getElementById('book-title-results');
   if (!v.trim()) { res.classList.add('hidden'); res.innerHTML=''; return; }
   res.classList.remove('hidden');
-  res.innerHTML = '<p class="btr-status">Suche …</p>';
+  res.innerHTML = '<p class="btr-status">Searching …</p>';
   clearTimeout(_bookTimer);
   _bookTimer = setTimeout(() => searchBookByTitle(v.trim()), 420);
 }
@@ -407,7 +402,7 @@ async function searchBookByTitle(query) {
   } catch {}
   const seen = new Set(local.map(b=>b.title.toLowerCase()));
   const all  = [...local, ...api.filter(b=>!seen.has(b.title.toLowerCase()))].slice(0,9);
-  if (!all.length) { res.innerHTML='<p class="btr-status">Keine Treffer gefunden.</p>'; return; }
+  if (!all.length) { res.innerHTML='<p class="btr-status">Keine Treffer found.</p>'; return; }
   res.innerHTML = all.map(book => {
     const inList    = S.authors.some(a => a.name.toLowerCase()===(book._authorName||'').toLowerCase());
     const isRated   = book._local && !!book.rating;
@@ -415,7 +410,7 @@ async function searchBookByTitle(query) {
     const onWish = !book._local && S.wishlist.some(w => w.googleId === book.id);
     let badge = '';
     if (book._local) {
-      badge = `<span class="btr-saved">${isRated?ratingEmoji(book.rating)+' Bewertet':'✓ In Liste'}</span>`;
+      badge = `<span class="btr-saved">${isRated?ratingEmoji(book.rating)+' Rated':'✓ In list'}</span>`;
     } else {
       const wishBtn = `<button class="btn-wish-sm${onWish?' on-wish':''}" data-gid="${esc(book.id)}" data-title="${esc(book.title)}" data-author="${esc(book._authorName||'')}" data-cover="${esc(book.coverId||'')}" data-year="${esc(book.year||'')}" onclick="event.stopPropagation();addToWishlistFromBtn(this)">${onWish?'✓🛒':'🛒'}</button>`;
       const autorBtn = (!inList && book._authorName) ? `<button class="btn-add-from-search" onclick="event.stopPropagation();addAuthorFromSearch(${jstr(book._authorName)})">+ Autor</button>` : '';
@@ -471,8 +466,8 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 async function loadAndRender() {
-  showLoading('Bücher werden geladen …');
-  try { await loadAllData(); renderAutoren(); renderAlleBuecher(); renderFavoriten(); renderMerkliste(); renderStatistik(); await loadDiscover(); }
+  showLoading('Loading books …');
+  try { await loadAllData(); renderAutoren(); renderAlleBuecher(); renderFavorites(); renderMerkliste(); renderStatistik(); await loadDiscover(); }
   catch(e) { console.error(e); }
   finally { hideLoading(); }
 }
@@ -515,7 +510,7 @@ function goToNewBook(authorId) {
 }
 
 /* ===== LOADING ===== */
-function showLoading(text='Wird geladen …') {
+function showLoading(text='Loading …') {
   document.getElementById('loading-text').textContent=text;
   document.getElementById('loading-overlay').classList.remove('hidden');
 }
@@ -532,7 +527,7 @@ function handleModalClick(e, modalId) {
 async function addAuthor(name, imgUrl) {
   if (S.authors.some(a => a.name.toLowerCase()===name.toLowerCase())) return;
   clearInlineAuthorSearch();
-  showLoading(`Bücher von ${name} werden geladen …`);
+  showLoading(`Loading books by ${name} …`);
   let author, withAuth;
   try {
     const books  = await fetchBooksForAuthor(name);
@@ -556,7 +551,7 @@ function renderAutoren() {
   renderInlineSuggestedChips();
   const list = document.getElementById('authors-list');
   if (!S.authors.length) {
-    list.innerHTML = `<div class="empty"><div class="empty-icon">🍁</div><p>Noch keine Autoren gespeichert.</p><p class="empty-hint">Such oben nach einem Autor!</p></div>`;
+    list.innerHTML = `<div class="empty"><div class="empty-icon">🍁</div><p>No authors saved yet.</p><p class="empty-hint">Search for an author above!</p></div>`;
     return;
   }
   list.innerHTML = S.authors.map(author => {
@@ -566,7 +561,7 @@ function renderAutoren() {
       ? `<img class="author-avatar" src="${author.imageUrl}" alt="${esc(author.name)}">`
       : `<div class="author-avatar-placeholder">✍️</div>`;
     const genres = (author.genres||[]).slice(0,4).map(g=>`<span class="genre-tag">${esc(g)}</span>`).join('');
-    const newB   = (author.newCount||0)>0 ? `<span class="author-new-badge" onclick="event.stopPropagation();goToNewBook('${author.id}')">🆕 ${author.newCount} neu</span>` : '';
+    const newB   = (author.newCount||0)>0 ? `<span class="author-new-badge" onclick="event.stopPropagation();goToNewBook('${author.id}')">🆕 ${author.newCount} new</span>` : '';
     return `<div class="author-card" id="author-${author.id}">
       <div class="author-header" onclick="toggleAuthor('${author.id}')">
         ${av}
@@ -579,7 +574,7 @@ function renderAutoren() {
       </div>
       <div class="author-books">
         <div class="author-book-filter">
-          <input type="text" placeholder="🔍 Bücher durchsuchen …"
+          <input type="text" placeholder="🔍 Search books …"
                  value="${esc(S.authorBookFilter[author.id]||'')}"
                  oninput="filterAuthorBooks('${author.id}',this.value)">
           <span class="author-books-count" id="count-${author.id}">${books.length} Bücher</span>
@@ -594,7 +589,7 @@ function renderAutoren() {
 function toggleAuthor(id) { document.getElementById(`author-${id}`)?.classList.toggle('expanded'); }
 
 function renderBooksGrid(books, authorId) {
-  if (!books.length) return `<p style="color:var(--tl);font-size:13px;padding:8px 0;grid-column:1/-1;font-family:'Cormorant Garamond',serif;font-style:italic">Kein Buch gefunden.</p>`;
+  if (!books.length) return `<p style="color:var(--tl);font-size:13px;padding:8px 0;grid-column:1/-1;font-family:'Cormorant Garamond',serif;font-style:italic">Kein Buch found.</p>`;
   return books.map(book => {
     const badge   = book.rating ? `<div class="book-rating-badge">${ratingEmoji(book.rating)}</div>` : '';
     const ribbon  = book.isNew  ? `<div class="book-new-ribbon">Neu</div>` : '';
@@ -652,9 +647,9 @@ function renderBookExpand(book, authorName) {
     ${emoji ? `<div class="expand-rating"><span class="expand-emoji">${emoji}</span><span class="expand-rating-text">${label}</span></div>`
             : `<div class="expand-rating"><span class="expand-rating-text">Noch nicht bewertet – klick nochmal zum Bearbeiten!</span></div>`}
     ${book.note ? `<div class="expand-note">${esc(book.note)}</div>`
-                : `<div class="expand-note expand-note-empty">Noch keine Notiz.</div>`}
+                : `<div class="expand-note expand-note-empty">No note yet.</div>`}
     <div class="expand-actions">
-      <button class="btn-edit" onclick="openEditBookModal('${book.authorId}','${book.id}')">✏️ Bewerten &amp; Notiz</button>
+      <button class="btn-edit" onclick="openEditBookModal('${book.authorId}','${book.id}')">✏️ Rate &amp; Note</button>
       <button class="btn-fav-toggle ${book.isFavorite?'is-fav':''}" onclick="quickToggleFavorite('${book.authorId}','${book.id}')">
         ${book.isFavorite?'⭐ Favorit':'☆ Favorit'}
       </button>
@@ -672,7 +667,7 @@ function renderAlleBuecher() {
   if (S.bookFilter==='gelesen')   all = all.filter(b=>b.rating);
   if (S.bookFilter==='favoriten') all = all.filter(b=>b.isFavorite);
   all.sort((a,b) => { if(b.isFavorite!==a.isFavorite) return b.isFavorite?1:-1; if(!!b.rating!==!!a.rating) return b.rating?1:-1; return a._authorName.localeCompare(b._authorName); });
-  if (!all.length) { list.innerHTML = `<div class="empty" id="books-empty"><div class="empty-icon">📖</div><p>Noch keine Bücher vorhanden.</p><p class="empty-hint">Füge zuerst einen Lieblingsautor hinzu!</p></div>`; return; }
+  if (!all.length) { list.innerHTML = `<div class="empty" id="books-empty"><div class="empty-icon">📖</div><p>No books yet.</p><p class="empty-hint">Add a favorite author first!</p></div>`; return; }
   list.innerHTML = all.map(book => {
     const emoji   = book.rating ? ratingEmoji(book.rating) : '';
     const preview = book.note ? book.note.slice(0,80)+(book.note.length>80?'…':'') : '';
@@ -756,21 +751,21 @@ function setBookFilter(filter, btn) {
 }
 
 /* ===== RENDER: FAVORITEN ===== */
-function filterFavoriten(query) {
+function filterFavorites(query) {
   S.favSearch = query;
   const clear = document.getElementById('fav-search-clear');
   if (clear) clear.classList.toggle('hidden', !query.trim());
-  renderFavoriten();
+  renderFavorites();
 }
 function clearFavSearch() {
   S.favSearch = '';
   const inp = document.getElementById('fav-search');
   if (inp) inp.value = '';
   document.getElementById('fav-search-clear')?.classList.add('hidden');
-  renderFavoriten();
+  renderFavorites();
 }
 
-function renderFavoriten() {
+function renderFavorites() {
   const grid = document.getElementById('favorites-grid');
   let favs = [];
   S.authors.forEach(a => (S.books[a.id]||[]).filter(b=>b.isFavorite).forEach(b=>favs.push({...b,_authorName:a.name})));
@@ -780,8 +775,8 @@ function renderFavoriten() {
   }
   if (!favs.length) {
     const msg = S.favSearch
-      ? `<p>Kein Favorit gefunden für „${esc(S.favSearch)}".</p><p class="empty-hint">Anderen Begriff versuchen!</p>`
-      : `<p>Noch keine Favoriten gespeichert.</p><p class="empty-hint">Klick auf ein Buch und markiere es als Favorit!</p>`;
+      ? `<p>No favorite found for „${esc(S.favSearch)}".</p><p class="empty-hint">Try a different search term!</p>`
+      : `<p>No favorites saved yet.</p><p class="empty-hint">Click a book and mark it as favorite!</p>`;
     grid.innerHTML = `<div class="empty"><div class="empty-icon">⭐</div>${msg}</div>`;
     return;
   }
@@ -831,7 +826,7 @@ function renderDiscover() {
   const nrl = document.getElementById('new-releases-list');
   nrl.innerHTML = S.newReleasesAll.length
     ? S.newReleasesAll.map(b=>discCardHtml(b,true)).join('')
-    : '<p class="disc-empty">Keine neuen Bücher gefunden. Schau später nochmal rein!</p>';
+    : '<p class="disc-empty">No new books found. Check back later!</p>';
   nrl.onclick = e => {
     const card = e.target.closest('.disc-card');
     if (!card) return;
@@ -843,16 +838,16 @@ function renderDiscover() {
   const sug  = document.getElementById('suggestions-list');
   const hint = document.getElementById('suggestions-hint');
   if (!S.suggestions.length) {
-    hint.textContent = 'Bewerte Bücher mit 💚 oder wähle ein Genre!';
-    sug.innerHTML    = '<p class="disc-empty">Noch keine Empfehlungen vorhanden.</p>';
+    hint.textContent = 'Rate books with 💚 or choose a genre!';
+    sug.innerHTML    = '<p class="disc-empty">No recommendations yet.</p>';
   } else {
     const topG = S.selectedDiscoverGenre
       || Object.entries(S.genreStats||{}).filter(([g])=>!SKIP_GENRES.has(g)).sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
     hint.textContent = S.selectedDiscoverGenre
       ? (S.selectedDiscoverGenre.startsWith('AUTHOR:')
-          ? `Bücher von ${S.selectedDiscoverGenre.slice(7)}`
+          ? `Books by ${S.selectedDiscoverGenre.slice(7)}`
           : `Genre: ${S.selectedDiscoverGenre}`)
-      : (topG ? `Weil du ${topG}-Bücher liebst …` : 'Basierend auf deinen Lieblingsgenres');
+      : (topG ? `Because you love ${topG} books …` : 'Based on your favorite genres');
     sug.innerHTML = S.suggestions.map(b=>discCardHtml(b,false)).join('');
   }
   sug.onclick = e => {
@@ -886,7 +881,7 @@ function getDiscoverGenres() {
   S.authors.forEach(a => (S.books[a.id]||[]).forEach(b =>
     (b.genres||[]).filter(g=>!SKIP_GENRES.has(g)).forEach(g => fromBooks.add(g))
   ));
-  const defaults = ['NYT-Bestseller','Spiegel-Bestseller','Neuerscheinungen','Krimi','Thriller','Liebesroman','Romantasy','Fantasy','Historischer Roman','Biografie','Science Fiction','Horror','Humor'];
+  const defaults = ['NYT-Bestseller','New Releases','Self-Help','Spirituality','Psychology','Business','Thriller','Mystery','Fantasy','Sci-Fi','Biography','History','Philosophy','Science','Adventure'];
   const all = [...fromBooks, ...defaults.filter(d => !fromBooks.has(d))];
   return [...new Set(all)].slice(0, 18);
 }
@@ -911,7 +906,7 @@ function getSuggestedAuthorsForDropdown() {
   topGenres.forEach(addAuthorsFromGenre);
   // Fallback defaults if not enough data
   if (result.length < 4) {
-    ['Krimi','Thriller','Liebesroman','Historischer Roman','Fantasy','Biografie'].forEach(addAuthorsFromGenre);
+    ['Self-Help','Spirituality','Thriller','Biography','Philosophy','Business'].forEach(addAuthorsFromGenre);
   }
   return result.slice(0, 8);
 }
@@ -922,12 +917,12 @@ function renderGenreSelect() {
   const genres = getDiscoverGenres();
   const sugAuthors = getSuggestedAuthorsForDropdown();
   const cur = S.selectedDiscoverGenre || '';
-  let html = `<option value="">✨ Für dich (nach Bewertungen)</option>`;
+  let html = `<option value="">✨ For you (by ratings)</option>`;
   html += `<optgroup label="📚 Genres">`;
   html += genres.map(g => `<option value="${esc(g)}" ${cur===g?'selected':''}>${esc(g)}</option>`).join('');
   html += `</optgroup>`;
   if (sugAuthors.length) {
-    html += `<optgroup label="✍️ Autoren-Tipps für dich">`;
+    html += `<optgroup label="✍️ Author suggestions for you">`;
     html += sugAuthors.map(a => `<option value="AUTHOR:${esc(a)}" ${cur==='AUTHOR:'+a?'selected':''}>✍️ ${esc(a)}</option>`).join('');
     html += `</optgroup>`;
   }
@@ -938,9 +933,9 @@ async function onGenreSelectChange(val) {
   S.selectedDiscoverGenre = val || null;
   const hint = document.getElementById('suggestions-hint');
   if (val && val.startsWith('AUTHOR:')) {
-    if (hint) hint.textContent = `Bücher von ${val.slice(7)}`;
+    if (hint) hint.textContent = `Books by ${val.slice(7)}`;
   } else {
-    if (hint) hint.textContent = val ? `Genre: ${val}` : 'Basierend auf deinen Lieblingsgenres';
+    if (hint) hint.textContent = val ? `Genre: ${val}` : 'Based on your favorite genres';
   }
   await loadSuggestionsForGenre(S.selectedDiscoverGenre);
 }
@@ -950,7 +945,7 @@ async function fetchNYTBestsellers() {
   // Without key: use a curated Google Books approximation
   if (!key) {
     const data = await fetchJson(
-      `${API}?q=new+york+times+bestseller&langRestrict=de&orderBy=newest&maxResults=40`
+      `${API}?q=new+york+times+bestseller&orderBy=newest&maxResults=40`
     );
     return mapBookItems((data.items||[]).sort((a,b)=>{
       const ya=parseInt((a.volumeInfo?.publishedDate||'0').slice(0,4))||0;
@@ -966,7 +961,7 @@ async function fetchNYTBestsellers() {
   const results = await Promise.all(nytBooks.map(async b => {
     try {
       const q = `intitle:${encodeURIComponent(b.title)}+inauthor:${encodeURIComponent(b.author)}`;
-      const gd = await fetchJson(`${API}?q=${q}&langRestrict=de&maxResults=3`);
+      const gd = await fetchJson(`${API}?q=${q}&maxResults=3`);
       const item = (gd.items||[])[0];
       if (!item) return null;
       return {
@@ -986,7 +981,7 @@ async function fetchNYTBestsellers() {
 async function loadSuggestionsForGenre(genre) {
   const sug  = document.getElementById('suggestions-list');
   const hint = document.getElementById('suggestions-hint');
-  sug.innerHTML = '<p class="disc-empty">Wird geladen …</p>';
+  sug.innerHTML = '<p class="disc-empty">Loading …</p>';
   try {
     let books;
     if (!genre) {
@@ -996,26 +991,26 @@ async function loadSuggestionsForGenre(genre) {
     } else if (genre.startsWith('AUTHOR:')) {
       const authorName = genre.slice(7);
       const data = await fetchJson(
-        `${API}?q=inauthor:${encodeURIComponent('"'+authorName+'"')}&langRestrict=de&orderBy=newest&maxResults=40`
+        `${API}?q=inauthor:${encodeURIComponent('"'+authorName+'"')}&orderBy=newest&maxResults=40`
       );
       books = mapBookItems((data.items||[]).sort((a,b)=>{
         const ya=parseInt((a.volumeInfo?.publishedDate||'0').slice(0,4))||0;
         const yb=parseInt((b.volumeInfo?.publishedDate||'0').slice(0,4))||0;
         return yb-ya;
       }).slice(0,16));
-      if (hint) hint.textContent = `Bücher von ${authorName}`;
+      if (hint) hint.textContent = `Books by ${authorName}`;
     } else {
       books = await fetchBooksForGenre(genreForApi(genre), genre);
     }
     S.suggestions = books;
     if (!books.length) {
-      hint.textContent = genre ? `Keine Bücher für „${genre.startsWith('AUTHOR:')?genre.slice(7):genre}" gefunden` : 'Keine Empfehlungen gefunden';
-      sug.innerHTML = '<p class="disc-empty">Nichts gefunden – versuch ein anderes Genre!</p>';
+      hint.textContent = genre ? `No books for „${genre.startsWith('AUTHOR:')?genre.slice(7):genre}" found` : 'Keine Empfehlungen found';
+      sug.innerHTML = '<p class="disc-empty">Nothing found – try another genre!</p>';
     } else {
       const topG = genre || Object.entries(S.genreStats||{}).filter(([g])=>!SKIP_GENRES.has(g)).sort((a,b)=>b[1]-a[1])[0]?.[0];
       hint.textContent = genre
-        ? (genre.startsWith('AUTHOR:') ? `Bücher von ${genre.slice(7)}` : `Genre: ${genre}`)
-        : (topG ? `Weil du ${topG}-Bücher liebst …` : 'Beliebte Bücher');
+        ? (genre.startsWith('AUTHOR:') ? `Books by ${genre.slice(7)}` : `Genre: ${genre}`)
+        : (topG ? `Because you love ${topG} books …` : 'Popular books');
       sug.innerHTML = books.map(b=>discCardHtml(b,false)).join('');
     }
     sug.onclick = e => {
@@ -1023,7 +1018,7 @@ async function loadSuggestionsForGenre(genre) {
       if (!card) return;
       openDiscDetail(JSON.parse(card.dataset.book.replace(/&#39;/g,"'")), false);
     };
-  } catch { sug.innerHTML = '<p class="disc-empty">Fehler beim Laden – nochmal versuchen!</p>'; }
+  } catch { sug.innerHTML = '<p class="disc-empty">Error loading – please try again!</p>'; }
 }
 
 function discCardHtml(book, isNew) {
@@ -1097,8 +1092,8 @@ function openDiscDetail(book, isNew) {
   if (wishBtn) {
     const gid = book.googleId || book.id;
     const onList = S.wishlist.some(w => w.googleId === gid);
-    wishBtn.textContent = onList ? '✓ Auf Merkliste' : '🛒 Auf Merkliste';
-    wishBtn.onclick = () => { addToWishlist(book); wishBtn.textContent='✓ Auf Merkliste'; };
+    wishBtn.textContent = onList ? '✓ On Wishlist' : '🛒 Add to Wishlist';
+    wishBtn.onclick = () => { addToWishlist(book); wishBtn.textContent='✓ On Wishlist'; };
   }
   document.getElementById('modal-disc-detail').classList.remove('hidden');
 }
@@ -1203,7 +1198,7 @@ function buildYearPicker(selectedYear) {
   const curYear = new Date().getFullYear();
   const years = [];
   for (let y = curYear + 1; y >= 2010; y--) years.push(y);
-  picker.innerHTML = `<button class="year-chip ${!selectedYear?'active':''}" data-year="">Kein Jahr</button>` +
+  picker.innerHTML = `<button class="year-chip ${!selectedYear?'active':''}" data-year="">No year</button>` +
     years.map(y => `<button class="year-chip ${selectedYear==y?'active':''}" data-year="${y}">${y}</button>`).join('');
   picker.onclick = e => {
     const btn = e.target.closest('.year-chip');
@@ -1243,8 +1238,8 @@ async function saveBookEdit() {
   // Remember what was open before re-render
   const wasExpanded = S.expandedBook ? {...S.expandedBook} : null;
   closeEditBookModal();
-  renderAutoren(); renderAlleBuecher(); renderFavoriten(); renderStatistik(); renderGenreSelect();
-  // Nach einer Bewertung Empfehlungen still aktualisieren
+  renderAutoren(); renderAlleBuecher(); renderFavorites(); renderStatistik(); renderGenreSelect();
+  // Silently update recommendations after a rating
   if (updates.rating === 'liked' && !S.selectedDiscoverGenre) {
     fetchGenreSuggestions(S.genreStats).then(books => { if (books.length) S.suggestions = books; }).catch(()=>{});
   }
@@ -1277,7 +1272,7 @@ async function quickToggleFavorite(authorId, bookId) {
       if (c) c.innerHTML=renderBookExpand(S.books[authorId][idx],a?.name||'');
     }
   }
-  renderFavoriten(); renderAlleBuecher(); renderStatistik();
+  renderFavorites(); renderAlleBuecher(); renderStatistik();
   try { await updateBook(bookId,{isFavorite:newFav}); } catch(e) { console.error(e); }
 }
 
@@ -1286,7 +1281,7 @@ function addToWishlist(book) {
   const gid = book.googleId || book.id;
   if (!gid) return;
   if (S.wishlist.some(w => w.googleId === gid)) {
-    flashWishBtn('Bereits auf der Merkliste ✓'); return;
+    flashWishBtn('Already on wishlist ✓'); return;
   }
   const item = {
     id: `wl_${Date.now()}`,
@@ -1301,7 +1296,7 @@ function addToWishlist(book) {
   renderMerkliste();
   updateWishBadge();
   renderDiscover();
-  flashWishBtn('Zur Merkliste hinzugefügt ✓');
+  flashWishBtn('Added to wishlist ✓');
   saveWishItem(item).catch(e=>console.error(e));
 }
 
@@ -1349,7 +1344,7 @@ function renderMerkliste() {
   if (!list) return;
   updateWishBadge();
   if (!S.wishlist.length) {
-    list.innerHTML = `<div class="empty"><div class="empty-icon">🛒</div><p>Noch nichts auf der Merkliste.</p><p class="empty-hint">Tippe bei einem Buch auf 🛒 um es hinzuzufügen!</p></div>`;
+    list.innerHTML = `<div class="empty"><div class="empty-icon">🛒</div><p>Your wishlist is empty.</p><p class="empty-hint">Tap 🛒 on any book to add it!</p></div>`;
     return;
   }
   const sorted = [...S.wishlist].sort((a,b) => b.addedAt - a.addedAt);
@@ -1399,11 +1394,11 @@ function renderStatistik() {
     <div class="stats-cards">
       <div class="stat-card">
         <div class="stat-number">${total}</div>
-        <div class="stat-label">Gelesen</div>
+        <div class="stat-label">Read</div>
       </div>
       <div class="stat-card">
         <div class="stat-number">${favs}</div>
-        <div class="stat-label">Favoriten</div>
+        <div class="stat-label">Favorites</div>
       </div>
       <div class="stat-card stat-ratings">
         <div class="stat-rating-row"><span>💚</span><span class="stat-rating-count">${liked}</span></div>
@@ -1411,16 +1406,16 @@ function renderStatistik() {
         <div class="stat-rating-row"><span>❌</span><span class="stat-rating-count">${disliked}</span></div>
       </div>
     </div>
-    ${topAuthor?`<div class="stat-highlight">⭐ Lieblingsautor: <strong>${esc(topAuthor[0])}</strong> (${topAuthor[1]} Bücher)</div>`:''}
-    ${topGenre ?`<div class="stat-highlight">📚 Lieblingsgenre: <strong>${esc(topGenre[0])}</strong></div>`:''}
+    ${topAuthor?`<div class="stat-highlight">⭐ Favorite author: <strong>${esc(topAuthor[0])}</strong> (${topAuthor[1]} books)</div>`:''}
+    ${topGenre ?`<div class="stat-highlight">📚 Favorite genre: <strong>${esc(topGenre[0])}</strong></div>`:''}
   `;
 
   if (!total) {
-    if (hintEl) hintEl.textContent = 'Bewerte Bücher, um deine Lesestatistik zu sehen!';
-    timelineEl.innerHTML = `<div class="empty"><div class="empty-icon">📊</div><p>Noch keine bewerteten Bücher.</p><p class="empty-hint">Geh zu einem Buch und bewerte es!</p></div>`;
+    if (hintEl) hintEl.textContent = 'Rate books to see your reading stats!';
+    timelineEl.innerHTML = `<div class="empty"><div class="empty-icon">📊</div><p>No rated books yet.</p><p class="empty-hint">Go to a book and rate it!</p></div>`;
     return;
   }
-  if (hintEl) hintEl.textContent = 'Tippe auf ein Buch um das Lesejahr zuzuweisen';
+  if (hintEl) hintEl.textContent = 'Tap a book to assign the reading year';
 
   const byYear = {};
   const unassigned = [];
@@ -1442,7 +1437,7 @@ function renderStatistik() {
 }
 
 function renderYearSection(year, books) {
-  const title = year ? `📅 ${year}` : '📌 Noch kein Jahr';
+  const title = year ? `📅 ${year}` : '📌 No year yet';
   return `<div class="stat-year-section">
     <div class="stat-year-header">${title}<span class="stat-year-count">${books.length} ${books.length===1?'Buch':'Bücher'}</span></div>
     <div class="stat-books-strip">
@@ -1474,7 +1469,7 @@ function openYearReassign(authorId, bookId) {
       <button class="yrp-close">✕</button>
     </div>
     <div class="yrp-chips">
-      ${years.map(y=>`<button class="yrp-chip ${(book.readYear||null)==y?'active':''}" data-year="${y===null?'':y}">${y||'Kein Jahr'}</button>`).join('')}
+      ${years.map(y=>`<button class="yrp-chip ${(book.readYear||null)==y?'active':''}" data-year="${y===null?'':y}">${y||'No year'}</button>`).join('')}
     </div>`;
   document.body.appendChild(popup);
   popup.querySelector('.yrp-close').onclick = () => popup.remove();
@@ -1509,9 +1504,9 @@ function stripHtml(s) {
 
 /* ===== DELETE ALL DATA ===== */
 async function confirmDeleteAllData() {
-  const ok = confirm('⚠️ Alle Autoren, Bücher, Favoriten und Merkliste werden unwiderruflich gelöscht!\n\nWirklich alles löschen?');
+  const ok = confirm('⚠️ Alle authors, Bücher, Favorites und Merkliste werden unwiderruflich gelöscht!\n\nWirklich alles löschen?');
   if (!ok) return;
-  showLoading('Daten werden gelöscht …');
+  showLoading('Deleting data …');
   try {
     const [authSnap, bookSnap, wishSnap, metaSnap] = await Promise.all([
       col('authors').get(),
@@ -1528,11 +1523,11 @@ async function confirmDeleteAllData() {
     S.authors = []; S.books = {}; S.genreStats = {}; S.wishlist = [];
     S.suggestions = []; S.newReleasesAll = []; S.expandedBook = null;
     S.selectedDiscoverGenre = null;
-    renderAutoren(); renderAlleBuecher(); renderFavoriten();
+    renderAutoren(); renderAlleBuecher(); renderFavorites();
     renderStatistik(); renderMerkliste(); renderGenreSelect();
     document.getElementById('new-badge').classList.add('hidden');
     document.getElementById('wish-badge').classList.add('hidden');
-  } catch(e) { alert('Fehler beim Löschen: ' + e.message); }
+  } catch(e) { alert('Error deleting: ' + e.message); }
   finally { hideLoading(); }
 }
 
@@ -1553,7 +1548,7 @@ async function exportData() {
   a.download = `buecherwelt-backup-${new Date().toISOString().slice(0,10)}.json`;
   a.click();
   URL.revokeObjectURL(url);
-  flashWishBtn('Daten exportiert ✓');
+  flashWishBtn('Data exported ✓');
 }
 
 async function importData(event) {
@@ -1561,13 +1556,13 @@ async function importData(event) {
   if (!file) return;
   const text = await file.text();
   let payload;
-  try { payload = JSON.parse(text); } catch { alert('Ungültige Datei – bitte eine Buecherwelt-Backup-Datei wählen.'); return; }
+  try { payload = JSON.parse(text); } catch { alert('Invalid file – please choose a My Reading World backup file.'); return; }
   if (!payload.version || !payload.authors) { alert('Ungültiges Format.'); return; }
 
-  const ok = confirm(`Backup vom ${payload.exportedAt?.slice(0,10)||'?'} importieren?\n${payload.authors?.length||0} Autoren, ${Object.values(payload.books||{}).flat().length} Bücher.\n\nVorhandene Daten bleiben erhalten – neue werden hinzugefügt.`);
+  const ok = confirm(`Backup from ${payload.exportedAt?.slice(0,10)||'?'} import?\n${payload.authors?.length||0} authors, ${Object.values(payload.books||{}).flat().length} books.\n\nExisting data is kept – new data will be added.`);
   if (!ok) return;
 
-  showLoading('Daten werden importiert …');
+  showLoading('Importing data …');
   try {
     // Authors
     for (const a of (payload.authors||[])) {
@@ -1602,10 +1597,10 @@ async function importData(event) {
     S.genreStats = merged;
     await col('meta').doc('genres').set(merged);
 
-    renderAutoren(); renderAlleBuecher(); renderFavoriten(); renderMerkliste(); renderStatistik();
+    renderAutoren(); renderAlleBuecher(); renderFavorites(); renderMerkliste(); renderStatistik();
     flashWishBtn('Import erfolgreich ✓');
   } catch(e) {
-    alert('Fehler beim Import: ' + e.message);
+    alert('Error importing: ' + e.message);
   } finally {
     hideLoading();
     event.target.value = '';

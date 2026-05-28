@@ -1,12 +1,12 @@
 /* ===== TOKENS ===== */
 :root{
-  --rose:#c4907a; --rl:#f5e4de; --rd:#a07060;
-  --sage:#8aaa82; --sl:#d8ead5; --sd:#5a7f55;
-  --amber:#c4a070; --al:#f0e4cc;
-  --cream:#fdf8f2; --white:#fffdfb;
-  --text:#3a2c22; --tm:#6b5040; --tl:#a08878;
-  --border:#e8d5cc;
-  --shadow:rgba(58,44,34,.07);
+  --rose:#4a7c5a; --rl:#d4eada; --rd:#2d5a3d;
+  --sage:#7a9e82; --sl:#d8ece0; --sd:#3d6e4a;
+  --amber:#6b8f5e; --al:#dce8d0;
+  --cream:#f2f6f2; --white:#f9fcf9;
+  --text:#1a2e22; --tm:#3d5445; --tl:#6b8070;
+  --border:#cdddd2;
+  --shadow:rgba(26,46,34,.07);
 }
 
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -16,9 +16,9 @@ em{font-style:italic;}
 
 /* ===== LOGIN ===== */
 .login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;
-  background:radial-gradient(ellipse at 30% 40%,#f5d5c840 0%,transparent 55%),
-             radial-gradient(ellipse at 75% 20%,#d8ead540 0%,transparent 50%),
-             linear-gradient(160deg,#3a2c22 0%,#6a3c22 45%,#c4a07066 100%);}
+  background:radial-gradient(ellipse at 30% 40%,#d4eada40 0%,transparent 55%),
+             radial-gradient(ellipse at 75% 20%,#d8ece040 0%,transparent 50%),
+             linear-gradient(160deg,#0d1f14 0%,#1a3d26 45%,#4a7c5a66 100%);}
 .login-card{background:var(--white);border-radius:24px;padding:48px 38px;max-width:340px;width:90%;text-align:center;box-shadow:0 28px 80px rgba(0,0,0,.3);border:1px solid var(--border);}
 .login-book{font-size:52px;margin-bottom:12px;}
 .login-eyebrow{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--rose);font-weight:500;margin-bottom:6px;}
@@ -33,7 +33,7 @@ em{font-style:italic;}
 .app{display:flex;flex-direction:column;min-height:100vh;}
 
 /* ===== HEADER ===== */
-.hdr{background:linear-gradient(160deg,#fdf0e8 0%,#f8ece5 45%,#f4ede5 100%);border-bottom:1px solid var(--border);padding:48px 20px 16px;text-align:center;position:sticky;top:0;z-index:10;}
+.hdr{background:linear-gradient(160deg,#eef5ee 0%,#e8f2ea 45%,#e4f0e6 100%);border-bottom:1px solid var(--border);padding:48px 20px 16px;text-align:center;position:sticky;top:0;z-index:10;}
 .hdr-eyebrow{font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--rose);font-weight:500;margin-bottom:5px;}
 .hdr-title{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;color:var(--text);}
 .hdr-title em{color:var(--rd);}
