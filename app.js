@@ -95,6 +95,7 @@ const S = {
   newReleasesAll:        [],
   suggestions:           [],
   authorBookFilter:      {},
+  dismissedAuthors:      new Set(),
 };
 
 /* ===== FIREBASE ===== */
@@ -236,12 +237,20 @@ function clearInlineAuthorSearch() {
 function renderInlineSuggestedChips() {
   const container = document.getElementById('inline-suggested-chips');
   if (!container) return;
-  container.innerHTML = SUGGESTED_AUTHORS.map(name => {
+  const visible = SUGGESTED_AUTHORS.filter(n => !S.dismissedAuthors.has(n));
+  const hasDismissed = S.dismissedAuthors.size > 0;
+  container.innerHTML = visible.map(name => {
     const added = S.authors.some(a => a.name.toLowerCase()===name.toLowerCase());
-    return `<button class="suggested-chip" ${added?'disabled':''} data-name="${esc(name)}">${added?'✓ ':''}${esc(name)}</button>`;
-  }).join('');
+    if (added) return `<button class="suggested-chip" disabled data-name="${esc(name)}">✓ ${esc(name)}</button>`;
+    return `<button class="suggested-chip has-x" data-name="${esc(name)}">
+      <span class="chip-name">${esc(name)}</span>
+      <span class="chip-sep"></span>
+      <span class="chip-x" onclick="event.stopPropagation();dismissSuggestedAuthor('${esc(name)}')">✕</span>
+    </button>`;
+  }).join('') + (hasDismissed ? `<button class="author-tips-reset" onclick="resetDismissedAuthors()">Zurücksetzen</button>` : '');
   container.onclick = e => {
-    const btn = e.target.closest('button');
+    if (e.target.classList.contains('chip-x')) return;
+    const btn = e.target.closest('button[data-name]');
     if (!btn || btn.disabled) return;
     addAuthor(btn.dataset.name, null);
   };
@@ -444,6 +453,7 @@ function doLogin() {
   startApp();
 }
 function startApp() {
+  S.dismissedAuthors = loadDismissedAuthors();
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   loadAndRender();
@@ -827,7 +837,6 @@ function renderDiscover() {
   };
 
   renderGenreSelect();
-  renderAuthorTipsChips();
 
   const sug  = document.getElementById('suggestions-list');
   const hint = document.getElementById('suggestions-hint');
@@ -851,21 +860,23 @@ function renderDiscover() {
   };
 }
 
-function renderAuthorTipsChips() {
-  const el = document.getElementById('author-tips-chips');
-  if (!el) return;
-  const authors = getSuggestedAuthorsForDropdown();
-  if (!authors.length) { el.innerHTML = ''; return; }
-  el.innerHTML = authors.map(a =>
-    `<div class="author-tip-chip" onclick="selectAuthorTip('${esc(a)}')">${esc(a)}</div>`
-  ).join('');
+
+function loadDismissedAuthors() {
+  try { const r = localStorage.getItem(`bw_dismissed_${S.code}`); return new Set(r ? JSON.parse(r) : []); }
+  catch { return new Set(); }
 }
-function selectAuthorTip(name) {
-  const val = 'AUTHOR:' + name;
-  S.selectedDiscoverGenre = val;
-  const sel = document.getElementById('genre-select');
-  if (sel) sel.value = val;
-  onGenreSelectChange(val);
+function saveDismissedAuthors() {
+  localStorage.setItem(`bw_dismissed_${S.code}`, JSON.stringify([...S.dismissedAuthors]));
+}
+function dismissSuggestedAuthor(name) {
+  S.dismissedAuthors.add(name);
+  saveDismissedAuthors();
+  renderInlineSuggestedChips();
+}
+function resetDismissedAuthors() {
+  S.dismissedAuthors.clear();
+  saveDismissedAuthors();
+  renderInlineSuggestedChips();
 }
 
 function getDiscoverGenres() {
@@ -1235,7 +1246,7 @@ async function saveBookEdit() {
   // Remember what was open before re-render
   const wasExpanded = S.expandedBook ? {...S.expandedBook} : null;
   closeEditBookModal();
-  renderAutoren(); renderAlleBuecher(); renderFavoriten(); renderStatistik(); renderGenreSelect(); renderAuthorTipsChips();
+  renderAutoren(); renderAlleBuecher(); renderFavoriten(); renderStatistik(); renderGenreSelect();
 
   // Restore expanded author + book detail without closing anything
   if (wasExpanded) {
@@ -1517,7 +1528,7 @@ async function confirmDeleteAllData() {
     S.suggestions = []; S.newReleasesAll = []; S.expandedBook = null;
     S.selectedDiscoverGenre = null;
     renderAutoren(); renderAlleBuecher(); renderFavoriten();
-    renderStatistik(); renderMerkliste(); renderGenreSelect(); renderAuthorTipsChips();
+    renderStatistik(); renderMerkliste(); renderGenreSelect();
     document.getElementById('new-badge').classList.add('hidden');
     document.getElementById('wish-badge').classList.add('hidden');
   } catch(e) { alert('Fehler beim Löschen: ' + e.message); }
