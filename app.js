@@ -237,14 +237,15 @@ function clearInlineAuthorSearch() {
 function renderInlineSuggestedChips() {
   const container = document.getElementById('inline-suggested-chips');
   if (!container) return;
-  container.innerHTML = SUGGESTED_AUTHORS.map(name => {
+  const visible = SUGGESTED_AUTHORS.filter(name => !S.dismissedAuthors.has(name));
+  const hasDismissed = SUGGESTED_AUTHORS.some(name => S.dismissedAuthors.has(name));
+  container.innerHTML = visible.map(name => {
     const added = S.authors.some(a => a.name.toLowerCase()===name.toLowerCase());
-    return `<button class="suggested-chip" ${added?'disabled':''} data-name="${esc(name)}">
-      ${added?'✓ ':''}${esc(name)}
-    </button>`;
-  }).join('');
+    if (added) return `<button class="suggested-chip" disabled data-name="${esc(name)}">✓ ${esc(name)}</button>`;
+    return `<button class="suggested-chip has-x" data-name="${esc(name)}">${esc(name)}<span class="chip-x" onclick="event.stopPropagation();dismissSuggestedAuthor('${esc(name)}')">✕</span></button>`;
+  }).join('') + (hasDismissed ? `<button class="author-tips-reset" onclick="resetDismissedAuthors()">Zurücksetzen</button>` : '');
   container.onclick = e => {
-    const btn = e.target.closest('button');
+    const btn = e.target.closest('button[data-name]');
     if (!btn || btn.disabled) return;
     addAuthor(btn.dataset.name, null);
   };
@@ -867,12 +868,14 @@ function dismissSuggestedAuthor(name) {
   saveDismissedAuthors();
   renderGenreSelect();
   renderAuthorTipsChips();
+  renderInlineSuggestedChips();
 }
 function resetDismissedAuthors() {
   S.dismissedAuthors.clear();
   saveDismissedAuthors();
   renderGenreSelect();
   renderAuthorTipsChips();
+  renderInlineSuggestedChips();
 }
 function renderAuthorTipsChips() {
   const el = document.getElementById('author-tips-chips');
