@@ -866,29 +866,21 @@ function saveDismissedAuthors() {
 function dismissSuggestedAuthor(name) {
   S.dismissedAuthors.add(name);
   saveDismissedAuthors();
-  renderGenreSelect();
-  renderAuthorTipsChips();
   renderInlineSuggestedChips();
 }
 function resetDismissedAuthors() {
   S.dismissedAuthors.clear();
   saveDismissedAuthors();
-  renderGenreSelect();
-  renderAuthorTipsChips();
   renderInlineSuggestedChips();
 }
 function renderAuthorTipsChips() {
   const el = document.getElementById('author-tips-chips');
   if (!el) return;
   const authors = getSuggestedAuthorsForDropdown();
-  const hasDismissed = S.dismissedAuthors.size > 0;
-  if (!authors.length && !hasDismissed) { el.innerHTML = ''; return; }
+  if (!authors.length) { el.innerHTML = ''; return; }
   el.innerHTML = authors.map(a =>
-    `<div class="author-tip-chip" onclick="selectAuthorTip('${esc(a)}')">
-      <span>${esc(a)}</span>
-      <button class="author-tip-x" onclick="event.stopPropagation();dismissSuggestedAuthor('${esc(a)}')" title="Entfernen">✕</button>
-    </div>`
-  ).join('') + (hasDismissed ? `<button class="author-tips-reset" onclick="resetDismissedAuthors()">Zurücksetzen</button>` : '');
+    `<div class="author-tip-chip" onclick="selectAuthorTip('${esc(a)}')">${esc(a)}</div>`
+  ).join('');
 }
 function selectAuthorTip(name) {
   const val = 'AUTHOR:' + name;
