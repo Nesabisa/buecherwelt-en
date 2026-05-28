@@ -99,7 +99,7 @@ function initFirebase() {
   try { firebase.initializeApp(window.FIREBASE_CONFIG); db = firebase.firestore(); return true; }
   catch(e) { console.error('Firebase init failed', e); return false; }
 }
-function col(path) { return db.collection(`buecherwelt/${S.code}/${path}`); }
+function col(path) { return db.collection(`buecherwelt-en/${S.code}/${path}`); }
 
 async function loadAllData() {
   const [authSnap, genreSnap, wishSnap] = await Promise.all([
@@ -252,7 +252,7 @@ function renderInlineSuggestedChips() {
 }
 
 async function fetchBooksForAuthor(name) {
-  const data = await fetchJson(`${API}?q=inauthor:${encodeURIComponent('"'+name+'"')}&maxResults=40&orderBy=newest`);
+  const data = await fetchJson(`${API}?q=inauthor:${encodeURIComponent('"'+name+'"')}&maxResults=40&orderBy=newest&langRestrict=en`);
   const last  = name.split(' ').slice(-1)[0].toLowerCase();
   return (data.items||[])
     .filter(i => (i.volumeInfo?.authors||[]).some(a => a.toLowerCase().includes(last)))
@@ -273,7 +273,7 @@ async function checkNewBooksForAuthor(author) {
   // Only books from the current or last year (e.g. 2025 or 2026)
   const cutoffYear = new Date().getFullYear() - 1;
   const last = author.name.split(' ').slice(-1)[0].toLowerCase();
-  const data  = await fetchJson(`${API}?q=inauthor:${encodeURIComponent('"'+author.name+'"')}&maxResults=20&orderBy=newest`);
+  const data  = await fetchJson(`${API}?q=inauthor:${encodeURIComponent('"'+author.name+'"')}&maxResults=20&orderBy=newest&langRestrict=en`);
   return (data.items||[])
     .filter(i => {
       const yr = parseInt((i.volumeInfo?.publishedDate||'').slice(0,4));
@@ -306,7 +306,7 @@ async function fetchBooksForGenre(apiQuery, genreName = '') {
     // Query each author individually (OR doesn't work in Google Books API), merge + dedupe
     const results = await Promise.all(
       authors.slice(0, 3).map(name =>
-        fetchJson(`${API}?q=inauthor:${encodeURIComponent('"'+name+'"')}&orderBy=newest&maxResults=15`)
+        fetchJson(`${API}?q=inauthor:${encodeURIComponent('"'+name+'"')}&orderBy=newest&langRestrict=en&maxResults=15`)
           .then(d => d.items || []).catch(() => [])
       )
     );
@@ -327,10 +327,10 @@ async function fetchBooksForGenre(apiQuery, genreName = '') {
 
   let url, filterYear = false;
   if (apiQuery.startsWith('NEW:')) {
-    url = `${API}?q=${encodeURIComponent(apiQuery.slice(4))}&maxResults=40&orderBy=newest`;
+    url = `${API}?q=${encodeURIComponent(apiQuery.slice(4))}&maxResults=40&orderBy=newest&langRestrict=en`;
     filterYear = true;
   } else {
-    url = `${API}?q=subject:${encodeURIComponent(apiQuery)}&maxResults=40&orderBy=relevance`;
+    url = `${API}?q=subject:${encodeURIComponent(apiQuery)}&maxResults=40&orderBy=relevance&langRestrict=en`;
   }
   const data = await fetchJson(url);
   return mapBookItems(
@@ -392,7 +392,7 @@ async function searchBookByTitle(query) {
   }));
   let api = [];
   try {
-    const data = await fetchJson(`${API}?q=${encodeURIComponent(query)}&maxResults=8&fields=items(id,volumeInfo(title,authors,imageLinks,publishedDate))`);
+    const data = await fetchJson(`${API}?q=${encodeURIComponent(query)}&maxResults=8&langRestrict=en&fields=items(id,volumeInfo(title,authors,imageLinks,publishedDate))`);
     api = (data.items||[]).map(i => ({
       id:i.id, title:i.volumeInfo?.title||'', _local:false,
       _authorName:(i.volumeInfo?.authors||[]).join(', '),
@@ -945,7 +945,7 @@ async function fetchNYTBestsellers() {
   // Without key: use a curated Google Books approximation
   if (!key) {
     const data = await fetchJson(
-      `${API}?q=new+york+times+bestseller&orderBy=newest&maxResults=40`
+      `${API}?q=new+york+times+bestseller&orderBy=newest&langRestrict=en&maxResults=40`
     );
     return mapBookItems((data.items||[]).sort((a,b)=>{
       const ya=parseInt((a.volumeInfo?.publishedDate||'0').slice(0,4))||0;
@@ -961,7 +961,7 @@ async function fetchNYTBestsellers() {
   const results = await Promise.all(nytBooks.map(async b => {
     try {
       const q = `intitle:${encodeURIComponent(b.title)}+inauthor:${encodeURIComponent(b.author)}`;
-      const gd = await fetchJson(`${API}?q=${q}&maxResults=3`);
+      const gd = await fetchJson(`${API}?q=${q}&langRestrict=en&maxResults=3`);
       const item = (gd.items||[])[0];
       if (!item) return null;
       return {
@@ -991,7 +991,7 @@ async function loadSuggestionsForGenre(genre) {
     } else if (genre.startsWith('AUTHOR:')) {
       const authorName = genre.slice(7);
       const data = await fetchJson(
-        `${API}?q=inauthor:${encodeURIComponent('"'+authorName+'"')}&orderBy=newest&maxResults=40`
+        `${API}?q=inauthor:${encodeURIComponent('"'+authorName+'"')}&orderBy=newest&langRestrict=en&maxResults=40`
       );
       books = mapBookItems((data.items||[]).sort((a,b)=>{
         const ya=parseInt((a.volumeInfo?.publishedDate||'0').slice(0,4))||0;
