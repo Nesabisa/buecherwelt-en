@@ -425,3 +425,13 @@ em{font-style:italic;}
   .stats-cards{gap:7px;}
   .stat-number{font-size:28px;}
 }
+
+/* ===== AUTHOR TIP CHIPS ===== */
+.author-tips-chips{display:flex;flex-wrap:wrap;gap:7px;padding:10px 0 6px;}
+.author-tip-chip{display:inline-flex;align-items:center;gap:7px;background:var(--al);border:1.5px solid var(--amber);border-radius:20px;padding:6px 10px 6px 14px;cursor:pointer;font-size:13px;font-family:'Jost',sans-serif;color:var(--ink);transition:background .15s;user-select:none;}
+.author-tip-chip:hover{background:var(--amber);color:#fff;}
+.author-tip-chip:hover .author-tip-x{color:#fff;opacity:.8;}
+.author-tip-x{background:none;border:none;cursor:pointer;color:var(--tl);font-size:11px;padding:0 0 0 2px;line-height:1;transition:color .15s;}
+.author-tip-x:hover{color:#c0392b!important;opacity:1!important;}
+.author-tips-reset{font-size:11px;color:var(--tl);background:none;border:none;cursor:pointer;padding:4px 0;text-decoration:underline;font-family:'Jost',sans-serif;}
+.author-tips-reset:hover{color:var(--ink);}

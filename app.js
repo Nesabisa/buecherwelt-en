@@ -95,6 +95,7 @@ const S = {
   newReleasesAll:        [],
   suggestions:           [],
   authorBookFilter:      {},
+  dismissedAuthors:      new Set(),
 };
 
 /* ===== FIREBASE ===== */
@@ -446,6 +447,7 @@ function doLogin() {
   startApp();
 }
 function startApp() {
+  S.dismissedAuthors = loadDismissedAuthors();
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   loadAndRender();
@@ -829,6 +831,7 @@ function renderDiscover() {
   };
 
   renderGenreSelect();
+  renderAuthorTipsChips();
 
   const sug  = document.getElementById('suggestions-list');
   const hint = document.getElementById('suggestions-hint');
@@ -850,6 +853,46 @@ function renderDiscover() {
     if (!card) return;
     openDiscDetail(JSON.parse(card.dataset.book.replace(/&#39;/g,"'")), false);
   };
+}
+
+function loadDismissedAuthors() {
+  try { const r = localStorage.getItem(`bw_dismissed_${S.code}`); return new Set(r ? JSON.parse(r) : []); }
+  catch { return new Set(); }
+}
+function saveDismissedAuthors() {
+  localStorage.setItem(`bw_dismissed_${S.code}`, JSON.stringify([...S.dismissedAuthors]));
+}
+function dismissSuggestedAuthor(name) {
+  S.dismissedAuthors.add(name);
+  saveDismissedAuthors();
+  renderGenreSelect();
+  renderAuthorTipsChips();
+}
+function resetDismissedAuthors() {
+  S.dismissedAuthors.clear();
+  saveDismissedAuthors();
+  renderGenreSelect();
+  renderAuthorTipsChips();
+}
+function renderAuthorTipsChips() {
+  const el = document.getElementById('author-tips-chips');
+  if (!el) return;
+  const authors = getSuggestedAuthorsForDropdown();
+  const hasDismissed = S.dismissedAuthors.size > 0;
+  if (!authors.length && !hasDismissed) { el.innerHTML = ''; return; }
+  el.innerHTML = authors.map(a =>
+    `<div class="author-tip-chip" onclick="selectAuthorTip('${esc(a)}')">
+      <span>${esc(a)}</span>
+      <button class="author-tip-x" onclick="event.stopPropagation();dismissSuggestedAuthor('${esc(a)}')" title="Entfernen">✕</button>
+    </div>`
+  ).join('') + (hasDismissed ? `<button class="author-tips-reset" onclick="resetDismissedAuthors()">Zurücksetzen</button>` : '');
+}
+function selectAuthorTip(name) {
+  const val = 'AUTHOR:' + name;
+  S.selectedDiscoverGenre = val;
+  const sel = document.getElementById('genre-select');
+  if (sel) sel.value = val;
+  onGenreSelectChange(val);
 }
 
 function getDiscoverGenres() {
@@ -874,7 +917,7 @@ function getSuggestedAuthorsForDropdown() {
   const result = [];
   const addAuthorsFromGenre = genre => {
     for (const author of (GENRE_AUTHORS[genre] || [])) {
-      if (!seen.has(author) && !alreadyAdded.has(author.toLowerCase())) {
+      if (!seen.has(author) && !alreadyAdded.has(author.toLowerCase()) && !S.dismissedAuthors.has(author)) {
         seen.add(author); result.push(author);
       }
     }
@@ -1219,7 +1262,7 @@ async function saveBookEdit() {
   // Remember what was open before re-render
   const wasExpanded = S.expandedBook ? {...S.expandedBook} : null;
   closeEditBookModal();
-  renderAutoren(); renderAlleBuecher(); renderFavoriten(); renderStatistik(); renderGenreSelect();
+  renderAutoren(); renderAlleBuecher(); renderFavoriten(); renderStatistik(); renderGenreSelect(); renderAuthorTipsChips();
 
   // Restore expanded author + book detail without closing anything
   if (wasExpanded) {
