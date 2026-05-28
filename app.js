@@ -201,14 +201,14 @@ async function _doInlineAuthorSearch(q) {
     const matched = [...seen.entries()]
       .filter(([n]) => n.toLowerCase().includes(ql) || ql.split(' ').every(w => n.toLowerCase().includes(w)))
       .slice(0,8);
-    if (!matched.length) { res.innerHTML = '<p class="btr-status">Keine Ergebnisse – anderen Namen versuchen?</p>'; return; }
+    if (!matched.length) { res.innerHTML = '<p class="btr-status">No results – try a different name?</p>'; return; }
     res.innerHTML = matched.map(([name, img]) => {
       const already = S.authors.some(a => a.name.toLowerCase() === name.toLowerCase());
       const av = img ? `<img class="author-result-avatar" src="${img.replace('http://','https://')}" alt="">` : `<div class="author-result-ph">✍️</div>`;
       return `<div class="author-result ${already?'already-added':''}">
         ${av}<div><div class="author-result-name">${esc(name)}</div></div>
-        ${already ? `<span class="already-label">✓ Gespeichert</span>`
-                  : `<button class="author-result-add" data-name="${esc(name)}" data-img="${esc(img||'')}">+ Hinzufügen</button>`}
+        ${already ? `<span class="already-label">✓ Saved</span>`
+                  : `<button class="author-result-add" data-name="${esc(name)}" data-img="${esc(img||'')}">+ Add</button>`}
       </div>`;
     }).join('');
     res.onclick = e => {
@@ -402,7 +402,7 @@ async function searchBookByTitle(query) {
   } catch {}
   const seen = new Set(local.map(b=>b.title.toLowerCase()));
   const all  = [...local, ...api.filter(b=>!seen.has(b.title.toLowerCase()))].slice(0,9);
-  if (!all.length) { res.innerHTML='<p class="btr-status">Keine Treffer found.</p>'; return; }
+  if (!all.length) { res.innerHTML='<p class="btr-status">No books found.</p>'; return; }
   res.innerHTML = all.map(book => {
     const inList    = S.authors.some(a => a.name.toLowerCase()===(book._authorName||'').toLowerCase());
     const isRated   = book._local && !!book.rating;
@@ -413,7 +413,7 @@ async function searchBookByTitle(query) {
       badge = `<span class="btr-saved">${isRated?ratingEmoji(book.rating)+' Rated':'✓ In list'}</span>`;
     } else {
       const wishBtn = `<button class="btn-wish-sm${onWish?' on-wish':''}" data-gid="${esc(book.id)}" data-title="${esc(book.title)}" data-author="${esc(book._authorName||'')}" data-cover="${esc(book.coverId||'')}" data-year="${esc(book.year||'')}" onclick="event.stopPropagation();addToWishlistFromBtn(this)">${onWish?'✓🛒':'🛒'}</button>`;
-      const autorBtn = (!inList && book._authorName) ? `<button class="btn-add-from-search" onclick="event.stopPropagation();addAuthorFromSearch(${jstr(book._authorName)})">+ Autor</button>` : '';
+      const autorBtn = (!inList && book._authorName) ? `<button class="btn-add-from-search" onclick="event.stopPropagation();addAuthorFromSearch(${jstr(book._authorName)})">+ Author</button>` : '';
       badge = `<div class="btr-badge-row">${autorBtn}${wishBtn}</div>`;
     }
     return `<div class="btr-item${isRated?' already-read':''}" ${book._local ? `onclick="jumpToBook('${book.authorId}','${book.id}')"` : ''}>
@@ -458,7 +458,7 @@ function startApp() {
 /* ===== INIT ===== */
 window.addEventListener('DOMContentLoaded', () => {
   if (!initFirebase()) {
-    document.querySelector('.login-sub').textContent = 'Firebase ist noch nicht eingerichtet – bitte EINRICHTUNG.md lesen.';
+    document.querySelector('.login-sub').textContent = 'Firebase is not set up yet – please read SETUP.md.';
     return;
   }
   const saved = localStorage.getItem('bw_code');
@@ -592,7 +592,7 @@ function renderBooksGrid(books, authorId) {
   if (!books.length) return `<p style="color:var(--tl);font-size:13px;padding:8px 0;grid-column:1/-1;font-family:'Cormorant Garamond',serif;font-style:italic">No books found.</p>`;
   return books.map(book => {
     const badge   = book.rating ? `<div class="book-rating-badge">${ratingEmoji(book.rating)}</div>` : '';
-    const ribbon  = book.isNew  ? `<div class="book-new-ribbon">Neu</div>` : '';
+    const ribbon  = book.isNew  ? `<div class="book-new-ribbon">New</div>` : '';
     const isExp   = S.expandedBook?.bookId===book.id;
     const cover   = book.coverId
       ? `<img class="book-cover" src="${book.coverId}" alt="${esc(book.title)}" loading="lazy">`
@@ -638,8 +638,8 @@ function closeBookExpand(authorId) {
 
 function renderBookExpand(book, authorName) {
   const emoji = book.rating ? ratingEmoji(book.rating) : null;
-  const label = {liked:'Toll!',neutral:'Ok',disliked:'Nicht meins'}[book.rating]||'';
-  const descContent = book.description ? `<div class="expand-description">${esc(book.description)}</div>` : `<div class="expand-desc-loading">Beschreibung wird geladen …</div>`;
+  const label = {liked:'Love it!',neutral:'Ok',disliked:'Not for me'}[book.rating]||'';
+  const descContent = book.description ? `<div class="expand-description">${esc(book.description)}</div>` : `<div class="expand-desc-loading">Loading description …</div>`;
   return `<div class="book-expand">
     <div class="expand-title">${esc(book.title)}</div>
     <div class="expand-author">${esc(authorName)}${book.year?' · '+book.year:''}</div>
@@ -651,10 +651,10 @@ function renderBookExpand(book, authorName) {
     <div class="expand-actions">
       <button class="btn-edit" onclick="openEditBookModal('${book.authorId}','${book.id}')">✏️ Rate &amp; Note</button>
       <button class="btn-fav-toggle ${book.isFavorite?'is-fav':''}" onclick="quickToggleFavorite('${book.authorId}','${book.id}')">
-        ${book.isFavorite?'⭐ Favorit':'☆ Favorit'}
+        ${book.isFavorite?'⭐ Favorite':'☆ Favorite'}
       </button>
-      <button class="btn-wish" onclick="addBookToWishlist('${book.authorId}','${book.id}')">🛒 Merken</button>
-      <button class="btn-secondary" onclick="closeBookExpand('${book.authorId}')">Schließen</button>
+      <button class="btn-wish" onclick="addBookToWishlist('${book.authorId}','${book.id}')">🛒 Wishlist</button>
+      <button class="btn-secondary" onclick="closeBookExpand('${book.authorId}')">Close</button>
     </div>
   </div>`;
 }
@@ -690,12 +690,12 @@ function renderAlleBuecher() {
       <div class="book-list-expand">
         ${book.description
           ? `<div class="bl-desc">${esc(book.description)}</div>`
-          : (book.googleId ? `<div class="bl-desc-loading">Beschreibung wird geladen …</div>` : '')}
+          : (book.googleId ? `<div class="bl-desc-loading">Loading description …</div>` : '')}
         ${book.note?`<div class="expand-note">${esc(book.note)}</div>`:''}
         <div class="expand-actions">
           <button class="btn-edit bl-edit">✏️ Edit</button>
           <button class="btn-fav-toggle ${book.isFavorite?'is-fav':''} bl-fav">
-            ${book.isFavorite?'⭐ Favorit':'☆ Favorit'}
+            ${book.isFavorite?'⭐ Favorite':'☆ Favorite'}
           </button>
         </div>
       </div>
@@ -1004,7 +1004,7 @@ async function loadSuggestionsForGenre(genre) {
     }
     S.suggestions = books;
     if (!books.length) {
-      hint.textContent = genre ? `No books for „${genre.startsWith('AUTHOR:')?genre.slice(7):genre}" found` : 'Keine Empfehlungen found';
+      hint.textContent = genre ? `No books for "${genre.startsWith('AUTHOR:')?genre.slice(7):genre}" found` : 'No recommendations found';
       sug.innerHTML = '<p class="disc-empty">Nothing found – try another genre!</p>';
     } else {
       const topG = genre || Object.entries(S.genreStats||{}).filter(([g])=>!SKIP_GENRES.has(g)).sort((a,b)=>b[1]-a[1])[0]?.[0];
@@ -1076,7 +1076,7 @@ function openDiscDetail(book, isNew) {
     descEl.textContent = stripHtml(book.description);
     descEl.classList.remove('hidden');
   } else {
-    descEl.textContent = 'Beschreibung wird geladen …';
+    descEl.textContent = 'Loading description …';
     descEl.classList.remove('hidden');
   }
   if (gid) {
@@ -1107,12 +1107,12 @@ function renderDiscDetailActions(book, isNew) {
     const existing = S.books[book.authorId]?.find(b => b.googleId === (book.googleId||book.id));
     if (existing) {
       el.innerHTML = existing.rating
-        ? `<div class="disc-detail-status">${ratingEmoji(existing.rating)} Bereits rated</div>
-           <button class="disc-detail-btn-primary" onclick="closeDiscDetail();openEditBookModal('${existing.authorId}','${existing.id}')">✏️ Bewertung ändern</button>`
-        : `<button class="disc-detail-btn-primary" onclick="closeDiscDetail();openEditBookModal('${existing.authorId}','${existing.id}')">✏️ Jetzt bewerten</button>`;
+        ? `<div class="disc-detail-status">${ratingEmoji(existing.rating)} Already rated</div>
+           <button class="disc-detail-btn-primary" onclick="closeDiscDetail();openEditBookModal('${existing.authorId}','${existing.id}')">✏️ Change rating</button>`
+        : `<button class="disc-detail-btn-primary" onclick="closeDiscDetail();openEditBookModal('${existing.authorId}','${existing.id}')">✏️ Rate now</button>`;
     } else {
       el.innerHTML = `
-        <button class="disc-detail-btn-sage" data-book='${bData}' onclick="addDiscoverBook(this,false);closeDiscDetail()">✓ Kenn ich schon</button>
+        <button class="disc-detail-btn-sage" data-book='${bData}' onclick="addDiscoverBook(this,false);closeDiscDetail()">✓ Already know this</button>
         <button class="disc-detail-btn-primary" data-book='${bData}' onclick="addDiscoverBook(this,true);closeDiscDetail()">✏️ I know this & rate</button>`;
     }
   } else {
@@ -1123,11 +1123,11 @@ function renderDiscDetailActions(book, isNew) {
     const existingBook = knownAuthor ? S.books[knownAuthor.id]?.find(b => b.googleId === gid) : null;
     if (existingBook) {
       el.innerHTML = existingBook.rating
-        ? `<div class="disc-detail-status">${ratingEmoji(existingBook.rating)} Bereits rated</div>
-           <button class="disc-detail-btn-primary" onclick="closeDiscDetail();openEditBookModal('${existingBook.authorId}','${existingBook.id}')">✏️ Bewertung ändern</button>`
-        : `<button class="disc-detail-btn-primary" onclick="closeDiscDetail();openEditBookModal('${existingBook.authorId}','${existingBook.id}')">✏️ Jetzt bewerten</button>`;
+        ? `<div class="disc-detail-status">${ratingEmoji(existingBook.rating)} Already rated</div>
+           <button class="disc-detail-btn-primary" onclick="closeDiscDetail();openEditBookModal('${existingBook.authorId}','${existingBook.id}')">✏️ Change rating</button>`
+        : `<button class="disc-detail-btn-primary" onclick="closeDiscDetail();openEditBookModal('${existingBook.authorId}','${existingBook.id}')">✏️ Rate now</button>`;
     } else if (authorName) {
-      el.innerHTML = `<button class="disc-detail-btn-sage" data-author="${esc(authorName)}" onclick="addAuthorFromDisc(this)">+ ${esc(authorName)} hinzufügen</button>`;
+      el.innerHTML = `<button class="disc-detail-btn-sage" data-author="${esc(authorName)}" onclick="addAuthorFromDisc(this)">+ Add ${esc(authorName)}</button>`;
     } else { el.innerHTML = ''; }
   }
 }
@@ -1353,7 +1353,7 @@ function renderMerkliste() {
     const cover   = item.coverId
       ? `<img class="wish-cover" src="${item.coverId}" alt="" loading="lazy">`
       : `<div class="wish-cover-ph">📖</div>`;
-    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(item.title+' '+authors+' kaufen')}`;
+    const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(item.title+' '+authors+' buy')}`;
     return `<div class="wish-item">
       ${cover}
       <div class="wish-info">
@@ -1361,8 +1361,8 @@ function renderMerkliste() {
         <div class="wish-author">${esc(authors)}${item.year?' · '+item.year:''}</div>
       </div>
       <div class="wish-btns">
-        <a class="wish-buy" href="${searchUrl}" target="_blank" rel="noopener" title="Im Web suchen">🔍 Kaufen</a>
-        <button class="wish-del" data-id="${item.id}" onclick="removeFromWishlist(this.dataset.id)" title="Entfernen">✕</button>
+        <a class="wish-buy" href="${searchUrl}" target="_blank" rel="noopener" title="Search online">🔍 Buy</a>
+        <button class="wish-del" data-id="${item.id}" onclick="removeFromWishlist(this.dataset.id)" title="Remove">✕</button>
       </div>
     </div>`;
   }).join('');
@@ -1557,7 +1557,7 @@ async function importData(event) {
   const text = await file.text();
   let payload;
   try { payload = JSON.parse(text); } catch { alert('Invalid file – please choose a My Reading World backup file.'); return; }
-  if (!payload.version || !payload.authors) { alert('Ungültiges Format.'); return; }
+  if (!payload.version || !payload.authors) { alert('Invalid format.'); return; }
 
   const ok = confirm(`Backup from ${payload.exportedAt?.slice(0,10)||'?'} import?\n${payload.authors?.length||0} authors, ${Object.values(payload.books||{}).flat().length} books.\n\nExisting data is kept – new data will be added.`);
   if (!ok) return;
@@ -1598,7 +1598,7 @@ async function importData(event) {
     await col('meta').doc('genres').set(merged);
 
     renderAutoren(); renderAlleBuecher(); renderFavorites(); renderMerkliste(); renderStatistik();
-    flashWishBtn('Import erfolgreich ✓');
+    flashWishBtn('Import successful ✓');
   } catch(e) {
     alert('Error importing: ' + e.message);
   } finally {
