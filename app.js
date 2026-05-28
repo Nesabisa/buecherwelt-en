@@ -61,6 +61,47 @@ function isGermanGenre(g) {
   return germanWords.test(g);
 }
 
+// Normalize a book title for deduplication: lowercase, strip parentheticals + punctuation
+function normTitle(t) {
+  return String(t||'').toLowerCase()
+    .replace(/\s*[\(\[].+?[\)\]]/g, '') // strip "(Reprint)", "[Kindle Edition]" etc.
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Deduplicate raw Google Books API items by normalized title.
+// Prefers items that have a cover image.
+function dedupeRaw(items) {
+  const seen = new Map(); // normTitle → index in result
+  const result = [];
+  for (const i of items) {
+    const key = normTitle(i.volumeInfo?.title || '');
+    if (!key) continue;
+    if (!seen.has(key)) {
+      seen.set(key, result.length);
+      result.push(i);
+    } else {
+      // Upgrade to this item if it has a cover and the stored one doesn't
+      const idx = seen.get(key);
+      const hasCover = !!i.volumeInfo?.imageLinks?.thumbnail;
+      const existingHasCover = !!result[idx].volumeInfo?.imageLinks?.thumbnail;
+      if (hasCover && !existingHasCover) result[idx] = i;
+    }
+  }
+  return result;
+}
+
+// Deduplicate already-mapped book objects by normalized title.
+function dedupeBooks(books) {
+  const seen = new Set();
+  return books.filter(b => {
+    const key = normTitle(b.title || '');
+    if (!key || seen.has(key)) return false;
+    seen.add(key); return true;
+  });
+}
+
 // Curated international authors per genre
 const GENRE_AUTHORS = {
   'Self-Help':                 ['James Clear', 'Mark Manson', 'Ryan Holiday'],
@@ -267,8 +308,8 @@ function renderInlineSuggestedChips() {
 async function fetchBooksForAuthor(name) {
   const data = await fetchJson(`${API}?q=inauthor:${encodeURIComponent('"'+name+'"')}&maxResults=40&orderBy=newest&langRestrict=en`);
   const last  = name.split(' ').slice(-1)[0].toLowerCase();
-  return (data.items||[])
-    .filter(i => isEnglish(i) && (i.volumeInfo?.authors||[]).some(a => a.toLowerCase().includes(last)))
+  return dedupeRaw((data.items||[])
+    .filter(i => isEnglish(i) && (i.volumeInfo?.authors||[]).some(a => a.toLowerCase().includes(last))))
     .map(i => ({
       id: i.id, googleId: i.id,
       title:   i.volumeInfo?.title   || 'Unknown',
@@ -287,12 +328,12 @@ async function checkNewBooksForAuthor(author) {
   const cutoffYear = new Date().getFullYear() - 1;
   const last = author.name.split(' ').slice(-1)[0].toLowerCase();
   const data  = await fetchJson(`${API}?q=inauthor:${encodeURIComponent('"'+author.name+'"')}&maxResults=20&orderBy=newest&langRestrict=en`);
-  return (data.items||[])
+  return dedupeRaw((data.items||[])
     .filter(i => {
       const yr = parseInt((i.volumeInfo?.publishedDate||'').slice(0,4));
       const authorsOk = (i.volumeInfo?.authors||[]).some(a=>a.toLowerCase().includes(last));
       return yr && yr >= cutoffYear && authorsOk && isEnglish(i);
-    })
+    }))
     .map(i => ({ id:i.id, googleId:i.id, title:i.volumeInfo?.title||'?',
       authors:i.volumeInfo?.authors||[author.name],
       coverId:i.volumeInfo?.imageLinks?.thumbnail?.replace('http://','https://')||null,
@@ -323,13 +364,13 @@ async function fetchBooksForGenre(apiQuery, genreName = '') {
           .then(d => d.items || []).catch(() => [])
       )
     );
-    const seen = new Set();
+    const seenId = new Set();
     const merged = results.flat().filter(i => {
-      if (seen.has(i.id)) return false;
-      seen.add(i.id);
+      if (seenId.has(i.id)) return false;
+      seenId.add(i.id);
       return isEnglish(i);
     });
-    return merged
+    return dedupeRaw(merged)
       .sort((a,b) => {
         const ya = parseInt((a.volumeInfo?.publishedDate||'0000').slice(0,4)) || 0;
         const yb = parseInt((b.volumeInfo?.publishedDate||'0000').slice(0,4)) || 0;
@@ -348,13 +389,13 @@ async function fetchBooksForGenre(apiQuery, genreName = '') {
   }
   const data = await fetchJson(url);
   return mapBookItems(
-    (data.items||[])
+    dedupeRaw((data.items||[])
       .filter(i => {
         if (!isEnglish(i)) return false;
         if (!filterYear) return true;
         const yr = parseInt((i.volumeInfo?.publishedDate||'').slice(0,4));
         return !yr || yr >= 2018;
-      })
+      }))
       .sort((a,b) => {
         const ya = parseInt((a.volumeInfo?.publishedDate||'0000').slice(0,4)) || 0;
         const yb = parseInt((b.volumeInfo?.publishedDate||'0000').slice(0,4)) || 0;
@@ -448,7 +489,7 @@ async function addAuthorFromSearch(name) { await addAuthor(name, null); }
 /* ===== PER-AUTHOR BOOK FILTER ===== */
 function filterAuthorBooks(authorId, query) {
   S.authorBookFilter[authorId] = query;
-  const books = (S.books[authorId]||[]).filter(b => !query || b.title.toLowerCase().includes(query.toLowerCase()));
+  const books = dedupeBooks((S.books[authorId]||[]).filter(b => !query || b.title.toLowerCase().includes(query.toLowerCase())));
   const grid  = document.getElementById(`grid-${authorId}`);
   const count = document.getElementById(`count-${authorId}`);
   if (grid)  grid.innerHTML  = renderBooksGrid(books, authorId);
@@ -604,6 +645,7 @@ function renderAutoren() {
 function toggleAuthor(id) { document.getElementById(`author-${id}`)?.classList.toggle('expanded'); }
 
 function renderBooksGrid(books, authorId) {
+  books = dedupeBooks(books);
   if (!books.length) return `<p style="color:var(--tl);font-size:13px;padding:8px 0;grid-column:1/-1;font-family:'Cormorant Garamond',serif;font-style:italic">No books found.</p>`;
   return books.map(book => {
     const badge   = book.rating ? `<div class="book-rating-badge">${ratingEmoji(book.rating)}</div>` : '';
@@ -678,7 +720,7 @@ function renderBookExpand(book, authorName) {
 function renderAlleBuecher() {
   const list = document.getElementById('books-list');
   let all = [];
-  S.authors.forEach(a => (S.books[a.id]||[]).forEach(b => all.push({...b,_authorName:a.name})));
+  S.authors.forEach(a => dedupeBooks(S.books[a.id]||[]).forEach(b => all.push({...b,_authorName:a.name})));
   if (S.bookFilter==='gelesen')   all = all.filter(b=>b.rating);
   if (S.bookFilter==='favoriten') all = all.filter(b=>b.isFavorite);
   all.sort((a,b) => { if(b.isFavorite!==a.isFavorite) return b.isFavorite?1:-1; if(!!b.rating!==!!a.rating) return b.rating?1:-1; return a._authorName.localeCompare(b._authorName); });
@@ -783,7 +825,7 @@ function clearFavSearch() {
 function renderFavorites() {
   const grid = document.getElementById('favorites-grid');
   let favs = [];
-  S.authors.forEach(a => (S.books[a.id]||[]).filter(b=>b.isFavorite).forEach(b=>favs.push({...b,_authorName:a.name})));
+  S.authors.forEach(a => dedupeBooks(S.books[a.id]||[]).filter(b=>b.isFavorite).forEach(b=>favs.push({...b,_authorName:a.name})));
   if (S.favSearch) {
     const ql = S.favSearch.toLowerCase();
     favs = favs.filter(b => b.title.toLowerCase().includes(ql) || b._authorName.toLowerCase().includes(ql));
@@ -863,7 +905,7 @@ function renderDiscover() {
           ? `Books by ${S.selectedDiscoverGenre.slice(7)}`
           : `Genre: ${S.selectedDiscoverGenre}`)
       : (topG ? `Because you love ${topG} books …` : 'Based on your favorite genres');
-    sug.innerHTML = S.suggestions.map(b=>discCardHtml(b,false)).join('');
+    sug.innerHTML = dedupeBooks(S.suggestions).map(b=>discCardHtml(b,false)).join('');
   }
   sug.onclick = e => {
     const card = e.target.closest('.disc-card');
@@ -962,7 +1004,7 @@ async function fetchNYTBestsellers() {
     const data = await fetchJson(
       `${API}?q=new+york+times+bestseller&orderBy=newest&langRestrict=en&maxResults=40`
     );
-    return mapBookItems((data.items||[]).filter(isEnglish).sort((a,b)=>{
+    return mapBookItems(dedupeRaw(data.items||[]).filter(isEnglish).sort((a,b)=>{
       const ya=parseInt((a.volumeInfo?.publishedDate||'0').slice(0,4))||0;
       const yb=parseInt((b.volumeInfo?.publishedDate||'0').slice(0,4))||0;
       return yb-ya;
@@ -1008,7 +1050,7 @@ async function loadSuggestionsForGenre(genre) {
       const data = await fetchJson(
         `${API}?q=inauthor:${encodeURIComponent('"'+authorName+'"')}&orderBy=newest&langRestrict=en&maxResults=40`
       );
-      books = mapBookItems((data.items||[]).filter(isEnglish).sort((a,b)=>{
+      books = mapBookItems(dedupeRaw(data.items||[]).filter(isEnglish).sort((a,b)=>{
         const ya=parseInt((a.volumeInfo?.publishedDate||'0').slice(0,4))||0;
         const yb=parseInt((b.volumeInfo?.publishedDate||'0').slice(0,4))||0;
         return yb-ya;
