@@ -48,6 +48,19 @@ const GENRE_EN_MAP = {
 };
 function genreForApi(g) { return GENRE_API_MAP[g] || GENRE_EN_MAP[g] || g; }
 
+// Returns true if a Google Books item is an English-language book
+function isEnglish(i) {
+  const lang = i.volumeInfo?.language;
+  return !lang || lang === 'en';
+}
+
+// Returns true if a genre string looks like a German label (umlauts, known German words)
+function isGermanGenre(g) {
+  if (/[äöüÄÖÜß]/.test(g)) return true;
+  const germanWords = /^(Ratgeber|Sachbuch|Belletristik|Verhalten|Sozial|Persönlich|Lebenshilfe|Wirtschaft|Gesellschaft|Politik|Kriminal|Historisch|Liebes|Abenteuer|Unterhalt|Technik|Medizin|Erziehung|Reise|Humor|Natur|Roman|Krimi|Klassiker|Biografie)/i;
+  return germanWords.test(g);
+}
+
 // Curated international authors per genre
 const GENRE_AUTHORS = {
   'Self-Help':                 ['James Clear', 'Mark Manson', 'Ryan Holiday'],
@@ -255,10 +268,10 @@ async function fetchBooksForAuthor(name) {
   const data = await fetchJson(`${API}?q=inauthor:${encodeURIComponent('"'+name+'"')}&maxResults=40&orderBy=newest&langRestrict=en`);
   const last  = name.split(' ').slice(-1)[0].toLowerCase();
   return (data.items||[])
-    .filter(i => (i.volumeInfo?.authors||[]).some(a => a.toLowerCase().includes(last)))
+    .filter(i => isEnglish(i) && (i.volumeInfo?.authors||[]).some(a => a.toLowerCase().includes(last)))
     .map(i => ({
       id: i.id, googleId: i.id,
-      title:   i.volumeInfo?.title   || 'Unbekannt',
+      title:   i.volumeInfo?.title   || 'Unknown',
       subtitle:i.volumeInfo?.subtitle|| '',
       authors: i.volumeInfo?.authors || [name],
       coverId: i.volumeInfo?.imageLinks?.thumbnail?.replace('http://','https://')||null,
@@ -278,7 +291,7 @@ async function checkNewBooksForAuthor(author) {
     .filter(i => {
       const yr = parseInt((i.volumeInfo?.publishedDate||'').slice(0,4));
       const authorsOk = (i.volumeInfo?.authors||[]).some(a=>a.toLowerCase().includes(last));
-      return yr && yr >= cutoffYear && authorsOk;
+      return yr && yr >= cutoffYear && authorsOk && isEnglish(i);
     })
     .map(i => ({ id:i.id, googleId:i.id, title:i.volumeInfo?.title||'?',
       authors:i.volumeInfo?.authors||[author.name],
@@ -313,7 +326,8 @@ async function fetchBooksForGenre(apiQuery, genreName = '') {
     const seen = new Set();
     const merged = results.flat().filter(i => {
       if (seen.has(i.id)) return false;
-      seen.add(i.id); return true;
+      seen.add(i.id);
+      return isEnglish(i);
     });
     return merged
       .sort((a,b) => {
@@ -336,6 +350,7 @@ async function fetchBooksForGenre(apiQuery, genreName = '') {
   return mapBookItems(
     (data.items||[])
       .filter(i => {
+        if (!isEnglish(i)) return false;
         if (!filterYear) return true;
         const yr = parseInt((i.volumeInfo?.publishedDate||'').slice(0,4));
         return !yr || yr >= 2018;
@@ -351,11 +366,11 @@ async function fetchBooksForGenre(apiQuery, genreName = '') {
 
 async function fetchGenreSuggestions(stats) {
   // Prefer genres from liked books, fall back to any genre from saved authors' books
-  let top = Object.entries(stats).filter(([g])=>!SKIP_GENRES.has(g)).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([g])=>g);
+  let top = Object.entries(stats).filter(([g])=>!SKIP_GENRES.has(g) && !isGermanGenre(g)).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([g])=>g);
   if (!top.length) {
     const fromBooks = new Set();
     S.authors.forEach(a => (S.books[a.id]||[]).forEach(b =>
-      (b.genres||[]).filter(g=>!SKIP_GENRES.has(g)).forEach(g=>fromBooks.add(g))
+      (b.genres||[]).filter(g=>!SKIP_GENRES.has(g) && !isGermanGenre(g)).forEach(g=>fromBooks.add(g))
     ));
     top = [...fromBooks].slice(0,3);
   }
@@ -879,7 +894,7 @@ function resetDismissedAuthors() {
 function getDiscoverGenres() {
   const fromBooks = new Set();
   S.authors.forEach(a => (S.books[a.id]||[]).forEach(b =>
-    (b.genres||[]).filter(g=>!SKIP_GENRES.has(g)).forEach(g => fromBooks.add(g))
+    (b.genres||[]).filter(g=>!SKIP_GENRES.has(g) && !isGermanGenre(g)).forEach(g => fromBooks.add(g))
   ));
   const defaults = ['NYT-Bestseller','New Releases','Self-Help','Spirituality','Psychology','Business','Thriller','Mystery','Fantasy','Sci-Fi','Biography','History','Philosophy','Science','Adventure'];
   const all = [...fromBooks, ...defaults.filter(d => !fromBooks.has(d))];
@@ -890,7 +905,7 @@ function getSuggestedAuthorsForDropdown() {
   const alreadyAdded = new Set(S.authors.map(a => a.name.toLowerCase()));
   // Top genres from liked books
   const topGenres = Object.entries(S.genreStats || {})
-    .filter(([g]) => !SKIP_GENRES.has(g))
+    .filter(([g]) => !SKIP_GENRES.has(g) && !isGermanGenre(g))
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6)
     .map(([g]) => g);
@@ -947,7 +962,7 @@ async function fetchNYTBestsellers() {
     const data = await fetchJson(
       `${API}?q=new+york+times+bestseller&orderBy=newest&langRestrict=en&maxResults=40`
     );
-    return mapBookItems((data.items||[]).sort((a,b)=>{
+    return mapBookItems((data.items||[]).filter(isEnglish).sort((a,b)=>{
       const ya=parseInt((a.volumeInfo?.publishedDate||'0').slice(0,4))||0;
       const yb=parseInt((b.volumeInfo?.publishedDate||'0').slice(0,4))||0;
       return yb-ya;
@@ -993,7 +1008,7 @@ async function loadSuggestionsForGenre(genre) {
       const data = await fetchJson(
         `${API}?q=inauthor:${encodeURIComponent('"'+authorName+'"')}&orderBy=newest&langRestrict=en&maxResults=40`
       );
-      books = mapBookItems((data.items||[]).sort((a,b)=>{
+      books = mapBookItems((data.items||[]).filter(isEnglish).sort((a,b)=>{
         const ya=parseInt((a.volumeInfo?.publishedDate||'0').slice(0,4))||0;
         const yb=parseInt((b.volumeInfo?.publishedDate||'0').slice(0,4))||0;
         return yb-ya;
