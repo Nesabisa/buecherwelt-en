@@ -1522,6 +1522,35 @@ function stripHtml(s) {
     .trim();
 }
 
+/* ===== DELETE ALL DATA ===== */
+async function confirmDeleteAllData() {
+  const ok = confirm('⚠️ Alle Autoren, Bücher, Favoriten und Merkliste werden unwiderruflich gelöscht!\n\nWirklich alles löschen?');
+  if (!ok) return;
+  showLoading('Daten werden gelöscht …');
+  try {
+    const [authSnap, bookSnap, wishSnap, metaSnap] = await Promise.all([
+      col('authors').get(),
+      col('books').get(),
+      col('wishlist').get(),
+      col('meta').get(),
+    ]);
+    await Promise.all([
+      ...authSnap.docs.map(d => d.ref.delete()),
+      ...bookSnap.docs.map(d => d.ref.delete()),
+      ...wishSnap.docs.map(d => d.ref.delete()),
+      ...metaSnap.docs.map(d => d.ref.delete()),
+    ]);
+    S.authors = []; S.books = {}; S.genreStats = {}; S.wishlist = [];
+    S.suggestions = []; S.newReleasesAll = []; S.expandedBook = null;
+    S.selectedDiscoverGenre = null;
+    renderAutoren(); renderAlleBuecher(); renderFavoriten();
+    renderStatistik(); renderMerkliste(); renderGenreSelect(); renderAuthorTipsChips();
+    document.getElementById('new-badge').classList.add('hidden');
+    document.getElementById('wish-badge').classList.add('hidden');
+  } catch(e) { alert('Fehler beim Löschen: ' + e.message); }
+  finally { hideLoading(); }
+}
+
 /* ===== IMPORT / EXPORT ===== */
 async function exportData() {
   const payload = {
