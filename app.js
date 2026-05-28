@@ -95,7 +95,6 @@ const S = {
   newReleasesAll:        [],
   suggestions:           [],
   authorBookFilter:      {},
-  dismissedAuthors:      new Set(),
 };
 
 /* ===== FIREBASE ===== */
@@ -237,15 +236,12 @@ function clearInlineAuthorSearch() {
 function renderInlineSuggestedChips() {
   const container = document.getElementById('inline-suggested-chips');
   if (!container) return;
-  const visible = SUGGESTED_AUTHORS.filter(name => !S.dismissedAuthors.has(name));
-  const hasDismissed = SUGGESTED_AUTHORS.some(name => S.dismissedAuthors.has(name));
-  container.innerHTML = visible.map(name => {
+  container.innerHTML = SUGGESTED_AUTHORS.map(name => {
     const added = S.authors.some(a => a.name.toLowerCase()===name.toLowerCase());
-    if (added) return `<button class="suggested-chip" disabled data-name="${esc(name)}">✓ ${esc(name)}</button>`;
-    return `<button class="suggested-chip has-x" data-name="${esc(name)}">${esc(name)}<span class="chip-x" onclick="event.stopPropagation();dismissSuggestedAuthor('${esc(name)}')">✕</span></button>`;
-  }).join('') + (hasDismissed ? `<button class="author-tips-reset" onclick="resetDismissedAuthors()">Zurücksetzen</button>` : '');
+    return `<button class="suggested-chip" ${added?'disabled':''} data-name="${esc(name)}">${added?'✓ ':''}${esc(name)}</button>`;
+  }).join('');
   container.onclick = e => {
-    const btn = e.target.closest('button[data-name]');
+    const btn = e.target.closest('button');
     if (!btn || btn.disabled) return;
     addAuthor(btn.dataset.name, null);
   };
@@ -448,7 +444,6 @@ function doLogin() {
   startApp();
 }
 function startApp() {
-  S.dismissedAuthors = loadDismissedAuthors();
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   loadAndRender();
@@ -856,23 +851,6 @@ function renderDiscover() {
   };
 }
 
-function loadDismissedAuthors() {
-  try { const r = localStorage.getItem(`bw_dismissed_${S.code}`); return new Set(r ? JSON.parse(r) : []); }
-  catch { return new Set(); }
-}
-function saveDismissedAuthors() {
-  localStorage.setItem(`bw_dismissed_${S.code}`, JSON.stringify([...S.dismissedAuthors]));
-}
-function dismissSuggestedAuthor(name) {
-  S.dismissedAuthors.add(name);
-  saveDismissedAuthors();
-  renderInlineSuggestedChips();
-}
-function resetDismissedAuthors() {
-  S.dismissedAuthors.clear();
-  saveDismissedAuthors();
-  renderInlineSuggestedChips();
-}
 function renderAuthorTipsChips() {
   const el = document.getElementById('author-tips-chips');
   if (!el) return;
@@ -912,7 +890,7 @@ function getSuggestedAuthorsForDropdown() {
   const result = [];
   const addAuthorsFromGenre = genre => {
     for (const author of (GENRE_AUTHORS[genre] || [])) {
-      if (!seen.has(author) && !alreadyAdded.has(author.toLowerCase()) && !S.dismissedAuthors.has(author)) {
+      if (!seen.has(author) && !alreadyAdded.has(author.toLowerCase())) {
         seen.add(author); result.push(author);
       }
     }
