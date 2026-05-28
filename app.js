@@ -437,7 +437,7 @@ function filterAuthorBooks(authorId, query) {
   const grid  = document.getElementById(`grid-${authorId}`);
   const count = document.getElementById(`count-${authorId}`);
   if (grid)  grid.innerHTML  = renderBooksGrid(books, authorId);
-  if (count) count.textContent = `${books.length} ${books.length===1?'Buch':'Bücher'}`;
+  if (count) count.textContent = `${books.length} ${books.length===1?'book':'books'}`;
 }
 
 /* ===== LOGIN ===== */
@@ -567,7 +567,7 @@ function renderAutoren() {
         ${av}
         <div class="author-info">
           <div class="author-name">${esc(author.name)}</div>
-          <div class="author-meta">${books.length} Bücher · ${readCount} bewertet</div>
+          <div class="author-meta">${books.length} books · ${readCount} rated</div>
           <div class="author-genres">${genres}</div>
         </div>
         <div class="author-actions">${newB}<button class="author-delete-btn" onclick="event.stopPropagation();startDeleteAuthor('${author.id}','${esc(author.name)}')">🗑</button><span class="author-toggle">▼</span></div>
@@ -577,7 +577,7 @@ function renderAutoren() {
           <input type="text" placeholder="🔍 Search books …"
                  value="${esc(S.authorBookFilter[author.id]||'')}"
                  oninput="filterAuthorBooks('${author.id}',this.value)">
-          <span class="author-books-count" id="count-${author.id}">${books.length} Bücher</span>
+          <span class="author-books-count" id="count-${author.id}">${books.length} books</span>
         </div>
         <div class="books-grid" id="grid-${author.id}">${renderBooksGrid(books,author.id)}</div>
         <div id="expand-${author.id}"></div>
@@ -589,7 +589,7 @@ function renderAutoren() {
 function toggleAuthor(id) { document.getElementById(`author-${id}`)?.classList.toggle('expanded'); }
 
 function renderBooksGrid(books, authorId) {
-  if (!books.length) return `<p style="color:var(--tl);font-size:13px;padding:8px 0;grid-column:1/-1;font-family:'Cormorant Garamond',serif;font-style:italic">Kein Buch found.</p>`;
+  if (!books.length) return `<p style="color:var(--tl);font-size:13px;padding:8px 0;grid-column:1/-1;font-family:'Cormorant Garamond',serif;font-style:italic">No books found.</p>`;
   return books.map(book => {
     const badge   = book.rating ? `<div class="book-rating-badge">${ratingEmoji(book.rating)}</div>` : '';
     const ribbon  = book.isNew  ? `<div class="book-new-ribbon">Neu</div>` : '';
@@ -645,7 +645,7 @@ function renderBookExpand(book, authorName) {
     <div class="expand-author">${esc(authorName)}${book.year?' · '+book.year:''}</div>
     <div class="expand-description-wrap">${descContent}</div>
     ${emoji ? `<div class="expand-rating"><span class="expand-emoji">${emoji}</span><span class="expand-rating-text">${label}</span></div>`
-            : `<div class="expand-rating"><span class="expand-rating-text">Noch nicht bewertet – klick nochmal zum Bearbeiten!</span></div>`}
+            : `<div class="expand-rating"><span class="expand-rating-text">Not rated yet – tap again to edit!</span></div>`}
     ${book.note ? `<div class="expand-note">${esc(book.note)}</div>`
                 : `<div class="expand-note expand-note-empty">No note yet.</div>`}
     <div class="expand-actions">
@@ -693,7 +693,7 @@ function renderAlleBuecher() {
           : (book.googleId ? `<div class="bl-desc-loading">Beschreibung wird geladen …</div>` : '')}
         ${book.note?`<div class="expand-note">${esc(book.note)}</div>`:''}
         <div class="expand-actions">
-          <button class="btn-edit bl-edit">✏️ Bearbeiten</button>
+          <button class="btn-edit bl-edit">✏️ Edit</button>
           <button class="btn-fav-toggle ${book.isFavorite?'is-fav':''} bl-fav">
             ${book.isFavorite?'⭐ Favorit':'☆ Favorit'}
           </button>
@@ -1107,13 +1107,13 @@ function renderDiscDetailActions(book, isNew) {
     const existing = S.books[book.authorId]?.find(b => b.googleId === (book.googleId||book.id));
     if (existing) {
       el.innerHTML = existing.rating
-        ? `<div class="disc-detail-status">${ratingEmoji(existing.rating)} Bereits bewertet</div>
+        ? `<div class="disc-detail-status">${ratingEmoji(existing.rating)} Bereits rated</div>
            <button class="disc-detail-btn-primary" onclick="closeDiscDetail();openEditBookModal('${existing.authorId}','${existing.id}')">✏️ Bewertung ändern</button>`
         : `<button class="disc-detail-btn-primary" onclick="closeDiscDetail();openEditBookModal('${existing.authorId}','${existing.id}')">✏️ Jetzt bewerten</button>`;
     } else {
       el.innerHTML = `
         <button class="disc-detail-btn-sage" data-book='${bData}' onclick="addDiscoverBook(this,false);closeDiscDetail()">✓ Kenn ich schon</button>
-        <button class="disc-detail-btn-primary" data-book='${bData}' onclick="addDiscoverBook(this,true);closeDiscDetail()">✏️ Kenn ich & bewerten</button>`;
+        <button class="disc-detail-btn-primary" data-book='${bData}' onclick="addDiscoverBook(this,true);closeDiscDetail()">✏️ I know this & rate</button>`;
     }
   } else {
     // Suggestion – check if author/book is already known
@@ -1123,7 +1123,7 @@ function renderDiscDetailActions(book, isNew) {
     const existingBook = knownAuthor ? S.books[knownAuthor.id]?.find(b => b.googleId === gid) : null;
     if (existingBook) {
       el.innerHTML = existingBook.rating
-        ? `<div class="disc-detail-status">${ratingEmoji(existingBook.rating)} Bereits bewertet</div>
+        ? `<div class="disc-detail-status">${ratingEmoji(existingBook.rating)} Bereits rated</div>
            <button class="disc-detail-btn-primary" onclick="closeDiscDetail();openEditBookModal('${existingBook.authorId}','${existingBook.id}')">✏️ Bewertung ändern</button>`
         : `<button class="disc-detail-btn-primary" onclick="closeDiscDetail();openEditBookModal('${existingBook.authorId}','${existingBook.id}')">✏️ Jetzt bewerten</button>`;
     } else if (authorName) {
@@ -1439,7 +1439,7 @@ function renderStatistik() {
 function renderYearSection(year, books) {
   const title = year ? `📅 ${year}` : '📌 No year yet';
   return `<div class="stat-year-section">
-    <div class="stat-year-header">${title}<span class="stat-year-count">${books.length} ${books.length===1?'Buch':'Bücher'}</span></div>
+    <div class="stat-year-header">${title}<span class="stat-year-count">${books.length} ${books.length===1?'book':'books'}</span></div>
     <div class="stat-books-strip">
       ${books.map(b => {
         const cover = b.coverId
@@ -1504,7 +1504,7 @@ function stripHtml(s) {
 
 /* ===== DELETE ALL DATA ===== */
 async function confirmDeleteAllData() {
-  const ok = confirm('⚠️ Alle authors, Bücher, Favorites und Merkliste werden unwiderruflich gelöscht!\n\nWirklich alles löschen?');
+  const ok = confirm('⚠️ All authors, books, favorites and wishlist will be permanently deleted!\n\nReally delete everything?');
   if (!ok) return;
   showLoading('Deleting data …');
   try {
