@@ -47,6 +47,21 @@ const GENRE_EN_MAP = {
   'Literary Fiction':          'literary fiction',
 };
 function genreForApi(g) { return GENRE_API_MAP[g] || GENRE_EN_MAP[g] || g; }
+function isKnownGenre(g) { return !!(GENRE_API_MAP[g] || GENRE_EN_MAP[g] || GENRE_AUTHORS[g]); }
+function buildAuthorGenreMap() {
+  const map = {};
+  for (const [genre, authors] of Object.entries(GENRE_AUTHORS))
+    for (const a of authors) (map[a.toLowerCase()] = map[a.toLowerCase()]||[]).push(genre);
+  return map;
+}
+function limitPerAuthor(books, max=2) {
+  const counts = {};
+  return books.filter(b => {
+    const a = (b.authors?.[0]||'unknown').toLowerCase();
+    counts[a] = (counts[a]||0)+1;
+    return counts[a] <= max;
+  });
+}
 
 // Returns true if a Google Books item is an English-language book
 function isEnglish(i) {
@@ -403,6 +418,90 @@ async function fetchBooksForGenre(apiQuery, genreName = '') {
       })
       .slice(0, 16)
   );
+}
+
+async function fetchPersonalizedSuggestions() {
+  const knownAuthors = new Set(S.authors.map(a => a.name.toLowerCase()));
+  const ownedGoogleIds = new Set();
+  S.authors.forEach(a => (S.books[a.id]||[]).forEach(b => ownedGoogleIds.add(b.googleId)));
+
+  const likedAuthors = S.authors.filter(a =>
+    !a.hidden && (S.books[a.id]||[]).some(b => b.rating === 'liked' && !b.hiddenFromList)
+  );
+
+  if (likedAuthors.length > 0) {
+    const authorGenreMap = buildAuthorGenreMap();
+    const genreScore = {};
+    const genreBecause = {};
+    for (const a of likedAuthors) {
+      for (const g of (authorGenreMap[a.name.toLowerCase()]||[])) {
+        genreScore[g] = (genreScore[g]||0)+2;
+        if (!genreBecause[g]) genreBecause[g] = a.name;
+      }
+      (S.books[a.id]||[]).filter(b => b.rating==='liked' && !b.hiddenFromList).forEach(b => {
+        (b.genres||[]).filter(g => !SKIP_GENRES.has(g) && !isGermanGenre(g) && (GENRE_AUTHORS[g]||isKnownGenre(g))).forEach(g => {
+          genreScore[g] = (genreScore[g]||0)+1;
+          if (!genreBecause[g]) genreBecause[g] = a.name;
+        });
+      });
+    }
+    const rankedGenres = Object.keys(genreScore).sort((a,b)=>genreScore[b]-genreScore[a]);
+    // Step 1: similar authors
+    const sugAuthors = [];
+    const seen = new Set();
+    for (const genre of rankedGenres)
+      for (const sug of (GENRE_AUTHORS[genre]||[]))
+        if (!seen.has(sug.toLowerCase()) && !knownAuthors.has(sug.toLowerCase())) {
+          seen.add(sug.toLowerCase());
+          sugAuthors.push({ name: sug, because: genreBecause[genre]||likedAuthors[0].name });
+        }
+    if (sugAuthors.length > 0) {
+      const books = [];
+      for (const { name: sugName, because } of sugAuthors.slice(0,8)) {
+        try {
+          const ab = await fetchBooksForAuthor(sugName);
+          ab.filter(b => !ownedGoogleIds.has(b.googleId)).slice(0,3)
+            .forEach(b => books.push({...b, _because: because}));
+        } catch {}
+        if (books.length >= 16) break;
+      }
+      if (books.length >= 1) return limitPerAuthor(dedupeBooks(books), 3).slice(0,16);
+    }
+    // Step 2: genre bestseller search
+    const because = likedAuthors[0]?.name;
+    const searchGenres = rankedGenres.filter(g => GENRE_API_MAP[g]||GENRE_EN_MAP[g]).slice(0,3);
+    if (searchGenres.length > 0) {
+      const books = [];
+      for (const genre of searchGenres) {
+        const gb = await fetchBooksForGenre(genreForApi(genre), genre);
+        gb.filter(b => !knownAuthors.has((b.authors?.[0]||'').toLowerCase()) && !ownedGoogleIds.has(b.googleId))
+          .slice(0,6).forEach(b => books.push({...b, _because: because}));
+        if (books.length >= 16) break;
+      }
+      if (books.length >= 1) return limitPerAuthor(dedupeBooks(books), 3).slice(0,16);
+    }
+  }
+  // No liked books → use genres from ALL books
+  const allGenres = {};
+  S.authors.filter(a=>!a.hidden).forEach(a => {
+    (S.books[a.id]||[]).filter(b=>!b.hiddenFromList).forEach(b => {
+      (b.genres||[]).filter(g=>!SKIP_GENRES.has(g)&&!isGermanGenre(g)&&isKnownGenre(g)&&GENRE_API_MAP[g]).forEach(g => {
+        allGenres[g] = (allGenres[g]||0)+1;
+      });
+    });
+  });
+  const topGenres = Object.entries(allGenres).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([g])=>g);
+  if (topGenres.length > 0) {
+    const books = [];
+    for (const genre of topGenres) {
+      const gb = await fetchBooksForGenre(genreForApi(genre), genre);
+      gb.filter(b=>!knownAuthors.has((b.authors?.[0]||'').toLowerCase())&&!ownedGoogleIds.has(b.googleId))
+        .slice(0,6).forEach(b=>books.push(b));
+      if (books.length >= 16) break;
+    }
+    if (books.length >= 1) return limitPerAuthor(dedupeBooks(books),3).slice(0,16);
+  }
+  return fetchNYTBestsellers();
 }
 
 async function fetchGenreSuggestions(stats) {
@@ -860,7 +959,7 @@ function renderFavorites() {
 /* ===== DISCOVER ===== */
 async function loadDiscover() {
   const allNew = [];
-  for (const author of S.authors) {
+  for (const author of S.authors.filter(a => !a.hidden)) {
     try {
       const nb = await checkNewBooksForAuthor(author);
       nb.forEach(b=>allNew.push(b));
@@ -872,7 +971,7 @@ async function loadDiscover() {
     } catch {}
   }
   S.newReleasesAll = allNew;
-  try { S.suggestions = await fetchGenreSuggestions(S.genreStats); } catch { S.suggestions = []; }
+  try { S.suggestions = await fetchPersonalizedSuggestions(); } catch { S.suggestions = []; }
   _lastDiscoverLoad = Date.now();
   renderDiscover();
   if (allNew.length) { document.getElementById('new-badge').classList.remove('hidden'); }
@@ -894,18 +993,20 @@ function renderDiscover() {
 
   const sug  = document.getElementById('suggestions-list');
   const hint = document.getElementById('suggestions-hint');
-  if (!S.suggestions.length) {
+  const ownedNow = new Set();
+  S.authors.forEach(a => (S.books[a.id]||[]).forEach(b => { if (!b.hiddenFromList) ownedNow.add(b.googleId); }));
+  const visibleSuggestions = S.suggestions.filter(b => !ownedNow.has(b.googleId||b.id));
+  if (!visibleSuggestions.length) {
     hint.textContent = 'Rate books with 💚 or choose a genre!';
     sug.innerHTML    = '<p class="disc-empty">No recommendations yet.</p>';
   } else {
-    const topG = S.selectedDiscoverGenre
-      || Object.entries(S.genreStats||{}).filter(([g])=>!SKIP_GENRES.has(g)).sort((a,b)=>b[1]-a[1])[0]?.[0]||'';
+    const becauseAuthor = !S.selectedDiscoverGenre && visibleSuggestions.find(b=>b._because)?._because;
     hint.textContent = S.selectedDiscoverGenre
       ? (S.selectedDiscoverGenre.startsWith('AUTHOR:')
           ? `Books by ${S.selectedDiscoverGenre.slice(7)}`
           : `Genre: ${S.selectedDiscoverGenre}`)
-      : (topG ? `Because you love ${topG} books …` : 'Based on your favorite genres');
-    sug.innerHTML = dedupeBooks(S.suggestions).map(b=>discCardHtml(b,false)).join('');
+      : (becauseAuthor ? `Because you like ${becauseAuthor} …` : 'Based on your ratings');
+    sug.innerHTML = visibleSuggestions.map(b=>discCardHtml(b,false)).join('');
   }
   sug.onclick = e => {
     const card = e.target.closest('.disc-card');
@@ -938,7 +1039,7 @@ function getDiscoverGenres() {
   S.authors.forEach(a => (S.books[a.id]||[]).forEach(b =>
     (b.genres||[]).filter(g=>!SKIP_GENRES.has(g) && !isGermanGenre(g)).forEach(g => fromBooks.add(g))
   ));
-  const defaults = ['NYT-Bestseller','New Releases','Self-Help','Spirituality','Psychology','Business','Thriller','Mystery','Fantasy','Sci-Fi','Biography','History','Philosophy','Science','Adventure'];
+  const defaults = ['NYT-Bestseller','Self-Help','Spirituality','Psychology','Business','Thriller','Mystery','Fantasy','Sci-Fi','Biography','History','Philosophy','Science','Adventure'];
   const all = [...fromBooks, ...defaults.filter(d => !fromBooks.has(d))];
   return [...new Set(all)].slice(0, 18);
 }
@@ -1042,7 +1143,7 @@ async function loadSuggestionsForGenre(genre) {
   try {
     let books;
     if (!genre) {
-      books = await fetchGenreSuggestions(S.genreStats);
+      books = await fetchPersonalizedSuggestions();
     } else if (genre === 'NYT-Bestseller') {
       books = await fetchNYTBestsellers();
     } else if (genre.startsWith('AUTHOR:')) {
@@ -1177,14 +1278,23 @@ function renderDiscDetailActions(book, isNew) {
     const authorName = (Array.isArray(book.authors) ? book.authors[0] : '') || '';
     const knownAuthor = S.authors.find(a => a.name.toLowerCase() === authorName.toLowerCase());
     const gid = book.googleId || book.id;
-    const existingBook = knownAuthor ? S.books[knownAuthor.id]?.find(b => b.googleId === gid) : null;
+    const existingBook = knownAuthor ? S.books[knownAuthor.id]?.find(b => b.googleId === gid && !b.hiddenFromList) : null;
     if (existingBook) {
       el.innerHTML = existingBook.rating
         ? `<div class="disc-detail-status">${ratingEmoji(existingBook.rating)} Already rated</div>
            <button class="disc-detail-btn-primary" onclick="closeDiscDetail();openEditBookModal('${existingBook.authorId}','${existingBook.id}')">✏️ Change rating</button>`
         : `<button class="disc-detail-btn-primary" onclick="closeDiscDetail();openEditBookModal('${existingBook.authorId}','${existingBook.id}')">✏️ Rate now</button>`;
     } else if (authorName) {
-      el.innerHTML = `<button class="disc-detail-btn-sage" data-author="${esc(authorName)}" onclick="addAuthorFromDisc(this)">+ Add ${esc(authorName)}</button>`;
+      const gidE   = esc(book.googleId||book.id||'');
+      const titleE = esc(book.title||'');
+      const coverE = esc(book.coverId||'');
+      const yearE  = esc(book.year||'');
+      el.innerHTML = `
+        <p class="disc-choice-label">What would you like to do?</p>
+        <button class="disc-detail-btn-primary" data-author="${esc(authorName)}" onclick="addAuthorFromDisc(this)">📚 Add author</button>
+        <button class="disc-detail-btn-amber"
+          data-gid="${gidE}" data-title="${titleE}" data-author="${esc(authorName)}" data-cover="${coverE}" data-year="${yearE}"
+          onclick="addSingleBookFromDisc(this)">📖 Add this book</button>`;
     } else { el.innerHTML = ''; }
   }
 }
@@ -1193,10 +1303,67 @@ function closeDiscDetail() {
   document.getElementById('modal-disc-detail').classList.add('hidden');
   _discBook = null;
 }
-function addAuthorFromDisc(btn) {
+async function addBookToExistingAuthor(googleId, title, authorName, coverId, year) {
+  const author = S.authors.find(a => a.name.toLowerCase()===authorName.toLowerCase());
+  if (!author) return;
+  const bookId = `${author.id}_${googleId}`;
+  const existingInAuthor = (S.books[author.id]||[]).find(b => b.id===bookId);
+  if (existingInAuthor) {
+    if (existingInAuthor.hiddenFromList) {
+      existingInAuthor.hiddenFromList = false;
+      await updateBook(bookId, { hiddenFromList: false });
+      renderAutoren(); renderAlleBuecher();
+      switchTab('books');
+      setTimeout(() => document.getElementById(`li-${bookId}`)?.scrollIntoView({behavior:'smooth',block:'center'}), 200);
+    } else { jumpToBook(author.id, bookId); }
+    return;
+  }
+  const newBook = {
+    id: bookId, googleId, authorId: author.id,
+    title, subtitle: '', authors: [authorName],
+    coverId: coverId||null, year, genres: [],
+    description: '', rating: null, note: '', isFavorite: false, isNew: true, addedAt: Date.now(),
+  };
+  await saveBook(newBook);
+  if (!S.books[author.id]) S.books[author.id] = [];
+  S.books[author.id].push(newBook);
+  renderAutoren(); renderAlleBuecher();
+  if (!author.hidden) {
+    switchTab('autoren');
+    setTimeout(() => {
+      const card = document.getElementById(`author-${author.id}`);
+      if (card && !card.classList.contains('expanded')) card.classList.add('expanded');
+      setTimeout(() => document.getElementById(`bc-${bookId}`)?.scrollIntoView({behavior:'smooth',block:'center'}), 300);
+    }, 100);
+  } else {
+    switchTab('books');
+    setTimeout(() => document.getElementById(`li-${bookId}`)?.scrollIntoView({behavior:'smooth',block:'center'}), 200);
+  }
+}
+
+async function addBookDirect(googleId, title, authorName, coverId, year) {
+  const existing = S.authors.find(a => a.name.toLowerCase()===authorName.toLowerCase());
+  if (existing) { await addBookToExistingAuthor(googleId, title, authorName, coverId, year); return; }
+  const authorId = 'a_' + Date.now();
+  const newAuthor = { id: authorId, name: authorName, genres: [], hidden: true, addedAt: Date.now() };
+  await col('authors').doc(authorId).set(newAuthor);
+  S.authors.push(newAuthor);
+  S.books[authorId] = [];
+  await addBookToExistingAuthor(googleId, title, authorName, coverId, year);
+}
+
+async function addSingleBookFromDisc(btn) {
+  const { gid, title, author: authorName, cover, year } = btn.dataset;
+  closeDiscDetail();
+  await addBookDirect(gid, title, authorName, cover, year);
+  renderDiscover();
+}
+
+async function addAuthorFromDisc(btn) {
   const name = btn.dataset.author;
   closeDiscDetail();
-  addAuthor(name, null);
+  await addAuthor(name, null);
+  renderDiscover();
 }
 
 async function addDiscoverBook(btn, openRating) {
