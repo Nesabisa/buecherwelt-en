@@ -7,44 +7,54 @@ const SUGGESTED_AUTHORS = [
 const SKIP_GENRES = new Set(['Fiction','Juvenile Fiction','Nonfiction','Juvenile Nonfiction',
   'Literary Collections','Literary Criticism','General','Short Stories','Classics']);
 
-// Genre name → API query
+// Genre name → short keyword for bestseller searches
 const GENRE_API_MAP = {
-  'Self-Help':       'self help personal development',
-  'Spirituality':    'spirituality mindfulness consciousness',
-  'Psychology':      'psychology behavior mind',
-  'Business':        'business entrepreneurship leadership',
-  'Philosophy':      'philosophy stoicism wisdom',
-  'History':         'history civilization world',
-  'Science':         'science popular physics biology',
-  'Biography':       'biography memoir autobiography',
-  'Thriller':        'thriller suspense crime',
-  'Mystery':         'mystery detective crime',
-  'Fantasy':         'fantasy epic magic',
-  'Sci-Fi':          'science fiction future space',
-  'Horror':          'horror supernatural dark',
-  'Adventure':       'adventure travel exploration',
-  'New Releases':    'NEW:bestseller nonfiction',
-  'NYT-Bestseller':  'NYT-Bestseller',
+  'Self-Help':           'Self-Help',
+  'Spirituality':        'Spirituality',
+  'Psychology':          'Psychology',
+  'Business':            'Business',
+  'Philosophy':          'Philosophy stoicism',
+  'History':             'History',
+  'Science':             'Science',
+  'Biography':           'Biography memoir',
+  'Thriller':            'Thriller',
+  'Mystery':             'Mystery detective',
+  'Fantasy':             'Fantasy',
+  'Sci-Fi':              'Science Fiction',
+  'Horror':              'Horror',
+  'Adventure':           'Adventure',
+  'Romance':             'Romance novel',
+  'Romantasy':           'Romantasy fantasy romance',
+  'Literary Fiction':    'Literary Fiction',
+  "Women's Fiction":     'Women Fiction drama',
+  'Historical Fiction':  'Historical Fiction',
+  'True Crime':          'True Crime',
+  'NYT-Bestseller':      'NYT-Bestseller',
 };
 const GENRE_EN_MAP = {
-  'Self-Help':                 'self help personal development',
-  'Body, Mind & Spirit':       'spirituality mindfulness consciousness',
-  'Psychology':                'psychology behavior mind',
-  'Business & Economics':      'business entrepreneurship leadership',
-  'Philosophy':                'philosophy stoicism wisdom',
-  'History':                   'history civilization',
-  'Science':                   'science popular',
-  'Biography & Autobiography': 'biography memoir',
-  'True Crime':                'true crime',
-  'Thriller':                  'thriller suspense',
-  'Mystery & Detective':       'mystery detective',
-  'Fantasy':                   'fantasy epic',
-  'Science Fiction':           'science fiction',
-  'Horror':                    'horror supernatural',
-  'Adventure':                 'adventure travel',
-  'Music':                     'music creativity',
-  'Sports & Recreation':       'sports athletes',
-  'Literary Fiction':          'literary fiction',
+  'Self-Help':                 'Self-Help',
+  'Body, Mind & Spirit':       'Spirituality mindfulness',
+  'Psychology':                'Psychology',
+  'Business & Economics':      'Business',
+  'Philosophy':                'Philosophy',
+  'History':                   'History',
+  'Science':                   'Science',
+  'Biography & Autobiography': 'Biography memoir',
+  'True Crime':                'True Crime',
+  'Thriller':                  'Thriller',
+  'Suspense':                  'Thriller suspense',
+  'Mystery & Detective':       'Mystery detective',
+  'Fantasy':                   'Fantasy',
+  'Science Fiction':           'Science Fiction',
+  'Sci-Fi':                    'Science Fiction',
+  'Horror':                    'Horror',
+  'Adventure':                 'Adventure',
+  'Music':                     'Music creativity',
+  'Sports & Recreation':       'Sports',
+  'Literary Fiction':          'Literary Fiction',
+  'Romance':                   'Romance novel',
+  "Women's Fiction":           'Women Fiction drama',
+  'Historical Fiction':        'Historical Fiction',
 };
 function genreForApi(g) { return GENRE_API_MAP[g] || GENRE_EN_MAP[g] || g; }
 function isKnownGenre(g) { return !!(GENRE_API_MAP[g] || GENRE_EN_MAP[g] || GENRE_AUTHORS[g]); }
@@ -117,32 +127,41 @@ function dedupeBooks(books) {
   });
 }
 
-// Curated international authors per genre
+// Currently trending authors per genre (EN market 2024-2025).
+// Used for author-similarity in recommendations (Step 1): if user likes an author,
+// we look up their genres here and suggest other authors from the same genre.
 const GENRE_AUTHORS = {
-  'Self-Help':                 ['James Clear', 'Mark Manson', 'Ryan Holiday', 'Mel Robbins', 'Brené Brown', 'Robin Sharma', 'Stephen Covey', 'Dale Carnegie', 'Napoleon Hill', 'Atomic Habits'],
-  'Spirituality':              ['Sadhguru', 'Eckhart Tolle', 'Thich Nhat Hanh', 'Deepak Chopra', 'Alan Watts', 'Tara Brach', 'Pema Chödrön', 'Ram Dass', 'Mooji'],
-  'Body, Mind & Spirit':       ['Sadhguru', 'Eckhart Tolle', 'Deepak Chopra', 'Alan Watts', 'Joe Dispenza', 'Wim Hof', 'Gabor Maté', 'Dr. Joe Dispenza', 'Bruce Lipton'],
-  'Psychology':                ['Daniel Kahneman', 'Robert Cialdini', 'Jordan Peterson', 'Viktor Frankl', 'Brené Brown', 'Adam Grant', 'Jonathan Haidt', 'Steven Pinker', 'Dan Ariely', 'Malcolm Gladwell'],
-  'Business':                  ['Malcolm Gladwell', 'Adam Grant', 'Simon Sinek', 'Seth Godin', 'Tim Ferriss', 'Peter Thiel', 'Eric Ries', 'Clayton Christensen', 'Michael Lewis', 'Ray Dalio'],
-  'Business & Economics':      ['Malcolm Gladwell', 'Adam Grant', 'Simon Sinek', 'Seth Godin', 'Tim Ferriss', 'Michael Lewis', 'Peter Thiel', 'Ray Dalio', 'Walter Isaacson', 'Phil Knight'],
-  'Philosophy':                ['Ryan Holiday', 'Alain de Botton', 'Naval Ravikant', 'Jordan Peterson', 'Nassim Taleb', 'Friedrich Nietzsche', 'Albert Camus', 'Epictetus', 'Seneca'],
-  'History':                   ['Yuval Noah Harari', 'Robert Greene', 'Nassim Taleb', 'Doris Kearns Goodwin', 'David McCullough', 'Erik Larson', 'Stephen Ambrose', 'Ron Chernow', 'Antony Beevor'],
-  'Science':                   ['Carl Sagan', 'Richard Dawkins', 'Bill Bryson', 'Neil deGrasse Tyson', 'Stephen Hawking', 'Michio Kaku', 'Sean Carroll', 'Brian Greene', 'Carlo Rovelli'],
-  'Biography':                 ['Walter Isaacson', 'Robert Caro', 'David Grann', 'Erik Larson', 'Doris Kearns Goodwin', 'Ron Chernow', 'Robert Massie', 'Jon Meacham', 'Taylor Branch'],
-  'Biography & Autobiography': ['Walter Isaacson', 'David Grann', 'Erik Larson', 'Tara Westover', 'Michelle Obama', 'Malala Yousafzai', 'Jeannette Walls', 'Cheryl Strayed', 'Matthew McConaughey'],
-  'Music':                     ['Rick Rubin', 'Bruce Springsteen', 'Bob Dylan', 'Keith Richards', 'Questlove', 'Carlos Santana', 'Patti Smith', 'Kim Gordon'],
-  'Thriller':                  ['Gillian Flynn', 'Dennis Lehane', 'Lee Child', 'James Patterson', 'Tana French', 'Michael Connelly', 'David Baldacci', 'Harlan Coben', 'John Grisham', 'Thomas Harris'],
-  'Mystery':                   ['Tana French', 'Michael Connelly', 'James Patterson', 'Agatha Christie', 'Richard Osman', 'Anthony Horowitz', 'Peter May', 'Ann Cleeves', 'Ian Rankin'],
-  'Mystery & Detective':       ['Tana French', 'Michael Connelly', 'Gillian Flynn', 'Agatha Christie', 'Richard Osman', 'Ruth Ware', 'Shari Lapena', 'Lisa Gardner', 'Karin Slaughter'],
-  'Fantasy':                   ['Brandon Sanderson', 'Patrick Rothfuss', 'Joe Abercrombie', 'Robin Hobb', 'Ursula Le Guin', 'N.K. Jemisin', 'Scott Lynch', 'Robert Jordan', 'George R.R. Martin', 'Terry Pratchett'],
-  'Science Fiction':           ['Andy Weir', 'Liu Cixin', 'Isaac Asimov', 'Philip K. Dick', 'Ursula Le Guin', 'Blake Crouch', 'Neal Stephenson', 'William Gibson', 'Kim Stanley Robinson'],
-  'Sci-Fi':                    ['Andy Weir', 'Liu Cixin', 'Blake Crouch', 'Michael Crichton', 'Philip K. Dick', 'Neal Stephenson', 'Kim Stanley Robinson', 'Peter Watts', 'Alastair Reynolds'],
-  'Horror':                    ['Stephen King', 'Paul Tremblay', 'Josh Malerman', 'Shirley Jackson', 'Dean Koontz', 'Grady Hendrix', 'Carmen Maria Machado', 'Joe Hill', 'Thomas Ligotti'],
-  'Adventure':                 ['Jon Krakauer', 'Sebastian Junger', 'Erik Larson', 'David Grann', 'Peter Heller', 'Tim Cahill', 'Mark Adams', 'Roz Savage'],
-  'Literary Fiction':          ['Cormac McCarthy', 'Don DeLillo', 'Jeffrey Eugenides', 'Colson Whitehead', 'Colum McCann', 'Kazuo Ishiguro', 'Zadie Smith', 'Michael Ondaatje', 'Donna Tartt'],
-  'True Crime':                ['Jon Ronson', 'Erik Larson', 'Michelle McNamara', 'David Grann', 'Harold Schechter', 'Ann Rule', 'Sarah Weinman', 'John Douglas'],
-  'Sports & Recreation':       ['Phil Knight', 'Michael Lewis', 'David Epstein', 'Brad Stulberg', 'Steve Magness', 'Matthew Syed'],
-  'Health & Fitness':          ['Giulia Enders', 'Andrew Huberman', 'Peter Attia', 'Rhonda Patrick', 'Matthew Walker', 'Michael Pollan', 'Mark Hyman'],
+  // === FICTION ===
+  'Romance':                   ['Colleen Hoover', 'Emily Henry', 'Taylor Jenkins Reid', 'Ali Hazelwood', 'Hannah Grace', 'Jojo Moyes', 'Talia Hibbert', 'Helen Hoang'],
+  'Romantasy':                 ['Rebecca Yarros', 'Sarah J. Maas', 'Holly Black', 'Jennifer L. Armentrout', 'Alexis Hall', 'Cassandra Clare', 'Nora Roberts'],
+  'Fantasy':                   ['Brandon Sanderson', 'Sarah J. Maas', 'V.E. Schwab', 'N.K. Jemisin', 'Leigh Bardugo', 'Joe Abercrombie', 'Robin Hobb', 'Travis Baldree'],
+  'Science Fiction':           ['Andy Weir', 'Liu Cixin', 'Blake Crouch', 'Martha Wells', 'Becky Chambers', 'Neal Stephenson', 'Kim Stanley Robinson'],
+  'Sci-Fi':                    ['Andy Weir', 'Liu Cixin', 'Blake Crouch', 'Michael Crichton', 'Martha Wells', 'Becky Chambers', 'Neal Stephenson'],
+  'Thriller':                  ['Harlan Coben', 'David Baldacci', 'Karin Slaughter', 'James Patterson', 'Lisa Gardner', 'Richard Osman', 'Lee Child', 'Riley Sager'],
+  'Suspense':                  ['Harlan Coben', 'Karin Slaughter', 'Riley Sager', 'B.A. Paris', 'Lisa Jewell', 'Liane Moriarty', 'Shari Lapena'],
+  'Mystery':                   ['Richard Osman', 'Tana French', 'Anthony Horowitz', 'Ann Cleeves', 'Michael Connelly', 'Ian Rankin', 'Agatha Christie'],
+  'Mystery & Detective':       ['Richard Osman', 'Tana French', 'Ruth Ware', 'Shari Lapena', 'Gillian Flynn', 'Michael Connelly', 'Agatha Christie'],
+  'Horror':                    ['Stephen King', 'Paul Tremblay', 'Riley Sager', 'Grady Hendrix', 'Josh Malerman', 'Joe Hill', 'Shirley Jackson'],
+  'Literary Fiction':          ['Kristin Hannah', 'Colson Whitehead', 'Kazuo Ishiguro', 'Sally Rooney', 'Donna Tartt', 'Colum McCann', 'Hanya Yanagihara'],
+  "Women's Fiction":           ['Liane Moriarty', 'Jojo Moyes', 'Kristin Hannah', 'Colleen Hoover', 'Lisa Jewell', 'Emily Henry', 'Taylor Jenkins Reid'],
+  'Historical Fiction':        ['Ken Follett', 'Kristin Hannah', 'Philippa Gregory', 'Anthony Doerr', 'Kate Quinn', 'Ariel Lawhon', 'Lisa See'],
+  'Adventure':                 ['Jon Krakauer', 'Sebastian Junger', 'David Grann', 'Andy Weir', 'Peter Heller', 'Tim Cahill'],
+  // === NONFICTION ===
+  'Self-Help':                 ['Mel Robbins', 'Brené Brown', 'James Clear', 'Jay Shetty', 'Mark Manson', 'Ryan Holiday', 'Robin Sharma', 'Gabby Bernstein'],
+  'Body, Mind & Spirit':       ['Jay Shetty', 'Sadhguru', 'Eckhart Tolle', 'Joe Dispenza', 'Deepak Chopra', 'Wim Hof', 'Gabor Maté', 'Tara Brach'],
+  'Spirituality':              ['Sadhguru', 'Eckhart Tolle', 'Thich Nhat Hanh', 'Jay Shetty', 'Deepak Chopra', 'Alan Watts', 'Tara Brach', 'Ram Dass'],
+  'Psychology':                ['Adam Grant', 'Jonathan Haidt', 'Brené Brown', 'Daniel Kahneman', 'Robert Cialdini', 'Dan Ariely', 'Paul Bloom', 'Viktor Frankl'],
+  'Business':                  ['Adam Grant', 'Simon Sinek', 'Malcolm Gladwell', 'Seth Godin', 'Tim Ferriss', 'Ray Dalio', 'Michael Lewis', 'Phil Knight'],
+  'Business & Economics':      ['Adam Grant', 'Simon Sinek', 'Malcolm Gladwell', 'Seth Godin', 'Michael Lewis', 'Ray Dalio', 'Phil Knight', 'Peter Thiel'],
+  'Philosophy':                ['Ryan Holiday', 'Alain de Botton', 'Jordan Peterson', 'Nassim Taleb', 'Naval Ravikant', 'Marcus Aurelius', 'Epictetus'],
+  'History':                   ['Erik Larson', 'David Grann', 'Yuval Noah Harari', 'Doris Kearns Goodwin', 'David McCullough', 'Ron Chernow', 'Walter Isaacson'],
+  'Science':                   ['Neil deGrasse Tyson', 'Bill Bryson', 'Brian Greene', 'Carl Sagan', 'Michio Kaku', 'Carlo Rovelli', 'Richard Dawkins'],
+  'Biography & Autobiography': ['Walter Isaacson', 'Michelle Obama', 'Matthew McConaughey', 'Tara Westover', 'David Grann', 'Erik Larson', 'Malala Yousafzai'],
+  'Biography':                 ['Walter Isaacson', 'David Grann', 'Ron Chernow', 'Erik Larson', 'Doris Kearns Goodwin', 'David McCullough', 'Jon Meacham'],
+  'True Crime':                ['Michelle McNamara', 'David Grann', 'Jon Ronson', 'Erik Larson', 'Robert Kolker', 'John Douglas', 'Ann Rule'],
+  'Health & Fitness':          ['Matthew Walker', 'Peter Attia', 'Andrew Huberman', 'Michael Pollan', 'Mark Hyman', 'Rhonda Patrick'],
+  'Music':                     ['Rick Rubin', 'Bruce Springsteen', 'Keith Richards', 'Patti Smith', 'Questlove', 'Bob Dylan'],
+  'Sports & Recreation':       ['Phil Knight', 'David Epstein', 'Michael Lewis', 'Brad Stulberg', 'Matthew Syed', 'Steve Magness'],
 };
 
 /* ===== STATE ===== */
@@ -373,58 +392,34 @@ function mapBookItems(items) {
   }));
 }
 
-// Shared helper: fetch books for a genre, sorted newest first.
-// genreName = original genre label → checked against GENRE_AUTHORS (array of authors, queried individually)
-// apiQuery  = fallback; "NEW:" prefix = free-text + newest + langRestrict=de
+// Fetch recent bestselling books for a genre.
+// Searches "New York Times bestseller + keyword" AND "bestseller + keyword",
+// filters to last 4 years and sorts by newest — same strategy as the DE version.
 async function fetchBooksForGenre(apiQuery, genreName = '') {
-  const authors = GENRE_AUTHORS[genreName];
-  if (authors) {
-    // Query each author individually (OR doesn't work in Google Books API), merge + dedupe
-    const results = await Promise.all(
-      authors.slice(0, 5).map(name =>
-        fetchJson(`${API}?q=inauthor:${encodeURIComponent('"'+name+'"')}&orderBy=newest&langRestrict=en&maxResults=15`)
-          .then(d => d.items || []).catch(() => [])
-      )
-    );
-    const seenId = new Set();
-    const merged = results.flat().filter(i => {
-      if (seenId.has(i.id)) return false;
-      seenId.add(i.id);
-      return isEnglish(i);
-    });
-    return dedupeRaw(merged)
-      .sort((a,b) => {
-        const ya = parseInt((a.volumeInfo?.publishedDate||'0000').slice(0,4)) || 0;
-        const yb = parseInt((b.volumeInfo?.publishedDate||'0000').slice(0,4)) || 0;
-        return yb - ya;
-      })
-      .slice(0, 16)
-      .map(i => mapBookItems([i])[0]);
-  }
+  const cutoff = new Date().getFullYear() - 4;
+  const keyword = GENRE_API_MAP[genreName] || GENRE_EN_MAP[genreName] || apiQuery;
 
-  let url, filterYear = false;
-  if (apiQuery.startsWith('NEW:')) {
-    url = `${API}?q=${encodeURIComponent(apiQuery.slice(4))}&maxResults=40&orderBy=newest&langRestrict=en`;
-    filterYear = true;
-  } else {
-    url = `${API}?q=subject:${encodeURIComponent(apiQuery)}&maxResults=40&orderBy=relevance&langRestrict=en`;
-  }
-  const data = await fetchJson(url);
-  return mapBookItems(
-    dedupeRaw((data.items||[])
-      .filter(i => {
-        if (!isEnglish(i)) return false;
-        if (!filterYear) return true;
-        const yr = parseInt((i.volumeInfo?.publishedDate||'').slice(0,4));
-        return !yr || yr >= 2018;
-      }))
-      .sort((a,b) => {
-        const ya = parseInt((a.volumeInfo?.publishedDate||'0000').slice(0,4)) || 0;
-        const yb = parseInt((b.volumeInfo?.publishedDate||'0000').slice(0,4)) || 0;
-        return yb - ya;
-      })
-      .slice(0, 16)
-  );
+  const [d1, d2] = await Promise.all([
+    fetchJson(`${API}?q=${encodeURIComponent('"New York Times bestseller" '+keyword)}&langRestrict=en&orderBy=newest&maxResults=30`)
+      .then(d => d.items || []).catch(() => []),
+    fetchJson(`${API}?q=${encodeURIComponent('bestseller '+keyword)}&langRestrict=en&orderBy=newest&maxResults=30`)
+      .then(d => d.items || []).catch(() => []),
+  ]);
+
+  const seen = new Set();
+  const merged = [...d1, ...d2].filter(i => {
+    if (seen.has(i.id)) return false;
+    seen.add(i.id);
+    if (!isEnglish(i)) return false;
+    const yr = parseInt((i.volumeInfo?.publishedDate || '').slice(0, 4));
+    return !yr || yr >= cutoff;
+  }).sort((a, b) => {
+    const ya = parseInt((a.volumeInfo?.publishedDate || '0').slice(0, 4)) || 0;
+    const yb = parseInt((b.volumeInfo?.publishedDate || '0').slice(0, 4)) || 0;
+    return yb - ya;
+  });
+
+  return limitPerAuthor(dedupeBooks(mapBookItems(merged.slice(0, 24))));
 }
 
 async function fetchPersonalizedSuggestions() {
@@ -1144,7 +1139,7 @@ function getDiscoverGenres() {
   S.authors.forEach(a => (S.books[a.id]||[]).forEach(b =>
     (b.genres||[]).filter(g=>!SKIP_GENRES.has(g) && !isGermanGenre(g)).forEach(g => fromBooks.add(g))
   ));
-  const defaults = ['NYT-Bestseller','Self-Help','Spirituality','Psychology','Business','Thriller','Mystery','Fantasy','Sci-Fi','Biography','History','Philosophy','Science','Adventure'];
+  const defaults = ['NYT-Bestseller','Romance','Romantasy','Thriller','Mystery','Fantasy','Sci-Fi','Horror','Historical Fiction','Literary Fiction','Self-Help','Psychology','Business','Spirituality','Biography','History','Science','Adventure'];
   const all = [...fromBooks, ...defaults.filter(d => !fromBooks.has(d))];
   return [...new Set(all)].slice(0, 18);
 }
