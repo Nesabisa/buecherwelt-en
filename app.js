@@ -578,10 +578,34 @@ async function searchBookByTitle(query) {
         : '';
       badge = `<div class="btr-badge-row">${bookBtn}${wishBtn}</div>`;
     }
-    return `<div class="btr-item${isRated?' already-read':''}" ${(book._local||bookAlreadySaved) ? `onclick="jumpToBook('${book.authorId||savedAuthor?.id}','${book._local?book.id:(savedAuthor?.id+'_'+book.id)}')"` : ''}>
+    const gidAttr = (!book._local && !bookAlreadySaved && book.id) ? `data-gid="${esc(book.id)}"` : '';
+    const clickHandler = (book._local||bookAlreadySaved)
+      ? `onclick="jumpToBook('${book.authorId||savedAuthor?.id}','${book._local?book.id:(savedAuthor?.id+'_'+book.id)}')" `
+      : `onclick="toggleBtrDesc(this,event)" `;
+    return `<div class="btr-item${isRated?' already-read':''}" ${gidAttr} ${clickHandler}>
       ${cov}<div class="btr-info"><div class="btr-title">${esc(book.title)}</div><div class="btr-author">${esc(book._authorName)}${book.year?' · '+book.year:''}</div></div>${badge}
+      ${(!book._local && !bookAlreadySaved) ? `<div class="btr-desc"></div>` : ''}
     </div>`;
   }).join('');
+}
+
+async function toggleBtrDesc(item, e) {
+  if (e.target.closest('button')) return;
+  const descEl = item.querySelector('.btr-desc');
+  if (!descEl) return;
+  if (item.classList.contains('btr-expanded')) { item.classList.remove('btr-expanded'); return; }
+  document.querySelectorAll('.btr-item.btr-expanded').forEach(i => i.classList.remove('btr-expanded'));
+  item.classList.add('btr-expanded');
+  if (descEl.dataset.loaded) return;
+  const gid = item.dataset.gid;
+  if (!gid) { descEl.textContent = 'No description available.'; descEl.dataset.loaded = '1'; return; }
+  descEl.textContent = 'Loading …';
+  try {
+    const data = await fetchJson(`${API}/${gid}?fields=volumeInfo(description)`);
+    const desc = stripHtml(data.volumeInfo?.description || '');
+    descEl.textContent = desc || 'No description available.';
+  } catch { descEl.textContent = 'Could not load description.'; }
+  descEl.dataset.loaded = '1';
 }
 
 function jumpToBook(authorId, bookId) {
@@ -1392,7 +1416,8 @@ async function addBookToExistingAuthor(googleId, title, authorName, coverId, yea
       existingInAuthor.hiddenFromList = false;
       await updateBook(bookId, { hiddenFromList: false });
       renderAutoren(); renderAlleBuecher();
-      switchTab('books');
+      clearBookTitleSearch();
+      switchTab('buecher');
       setTimeout(() => document.getElementById(`li-${bookId}`)?.scrollIntoView({behavior:'smooth',block:'center'}), 200);
     } else { jumpToBook(author.id, bookId); }
     return;
@@ -1407,17 +1432,9 @@ async function addBookToExistingAuthor(googleId, title, authorName, coverId, yea
   if (!S.books[author.id]) S.books[author.id] = [];
   S.books[author.id].push(newBook);
   renderAutoren(); renderAlleBuecher();
-  if (!author.hidden) {
-    switchTab('autoren');
-    setTimeout(() => {
-      const card = document.getElementById(`author-${author.id}`);
-      if (card && !card.classList.contains('expanded')) card.classList.add('expanded');
-      setTimeout(() => document.getElementById(`bc-${bookId}`)?.scrollIntoView({behavior:'smooth',block:'center'}), 300);
-    }, 100);
-  } else {
-    switchTab('books');
-    setTimeout(() => document.getElementById(`li-${bookId}`)?.scrollIntoView({behavior:'smooth',block:'center'}), 200);
-  }
+  clearBookTitleSearch();
+  switchTab('buecher');
+  setTimeout(() => document.getElementById(`li-${bookId}`)?.scrollIntoView({behavior:'smooth',block:'center'}), 200);
 }
 
 async function addBookDirect(googleId, title, authorName, coverId, year) {
