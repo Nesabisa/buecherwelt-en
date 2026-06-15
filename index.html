@@ -7,7 +7,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=3">
+  <link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body>
 
@@ -252,6 +252,18 @@
     </div>
   </div>
 
+  <!-- ===== MODAL: DELETE AUTHOR ===== -->
+  <div id="modal-delete-author" class="modal-ov hidden" onclick="handleModalClick(event,'modal-delete-author')">
+    <div class="msheet">
+      <div class="m-handle"></div>
+      <h3 class="m-title" id="del-author-modal-name"></h3>
+      <p class="del-author-hint">What should happen to their books?</p>
+      <button class="disc-detail-btn-sage" onclick="deleteAuthorKeepBooks()">📚 Keep books</button>
+      <button class="disc-detail-btn-danger" onclick="deleteAuthorAndBooks()">🗑 Delete author &amp; all books</button>
+      <button class="m-cancel del-author-cancel" onclick="closeDeleteAuthorModal()">Cancel</button>
+    </div>
+  </div>
+
   <!-- ===== UNDO TOAST ===== -->
   <div id="delete-toast" class="delete-toast hidden">
     <span><strong id="delete-toast-name"></strong> removed</span>
@@ -268,6 +280,6 @@
   </div>
 
   <script src="firebase-config.js"></script>
-  <script src="app.js?v=9"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>

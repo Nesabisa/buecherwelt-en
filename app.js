@@ -201,45 +201,47 @@ async function deleteAuthorFromDb(authorId) {
 let _deleteTimer = null;
 let _deletePending = null;
 
+let _pendingDeleteAuthorId = null;
+
 function startDeleteAuthor(authorId, name) {
-  if (_deleteTimer) { clearTimeout(_deleteTimer); commitDelete(); }
-  _deletePending = { authorId, author: S.authors.find(a=>a.id===authorId), books: S.books[authorId]||[] };
-  S.authors = S.authors.filter(a=>a.id!==authorId);
+  _pendingDeleteAuthorId = authorId;
+  document.getElementById('del-author-modal-name').innerHTML = `Delete <em>${esc(name)}</em>?`;
+  document.getElementById('modal-delete-author').classList.remove('hidden');
+}
+
+function closeDeleteAuthorModal() {
+  document.getElementById('modal-delete-author').classList.add('hidden');
+  _pendingDeleteAuthorId = null;
+}
+
+async function deleteAuthorKeepBooks() {
+  const authorId = _pendingDeleteAuthorId;
+  closeDeleteAuthorModal();
+  if (!authorId) return;
+  const author = S.authors.find(a => a.id === authorId);
+  if (!author) return;
+  author.hidden = true;
+  renderAutoren(); renderAlleBuecher(); renderFavorites();
+  try { await col('authors').doc(authorId).update({ hidden: true }); } catch(e) { console.error(e); }
+}
+
+async function deleteAuthorAndBooks() {
+  const authorId = _pendingDeleteAuthorId;
+  closeDeleteAuthorModal();
+  if (!authorId) return;
+  const books = S.books[authorId] || [];
+  S.authors = S.authors.filter(a => a.id !== authorId);
   delete S.books[authorId];
   renderAutoren(); renderAlleBuecher(); renderFavorites();
-  showDeleteToast(name);
-  _deleteTimer = setTimeout(commitDelete, 5000);
+  try {
+    await Promise.all(books.map(b => col('books').doc(b.id).delete()));
+    await col('authors').doc(authorId).delete();
+  } catch(e) { console.error(e); }
 }
 
-function undoDelete() {
-  if (!_deletePending) return;
-  clearTimeout(_deleteTimer); _deleteTimer = null;
-  S.authors.push(_deletePending.author);
-  S.books[_deletePending.authorId] = _deletePending.books;
-  _deletePending = null;
-  hideDeleteToast();
-  renderAutoren(); renderAlleBuecher(); renderFavorites();
-}
-
-async function commitDelete() {
-  if (!_deletePending) return;
-  const {authorId} = _deletePending;
-  _deletePending = null; _deleteTimer = null;
-  hideDeleteToast();
-  try { await deleteAuthorFromDb(authorId); } catch(e) { console.error(e); }
-}
-
-function showDeleteToast(name) {
-  const t = document.getElementById('delete-toast');
-  document.getElementById('delete-toast-name').textContent = name;
-  t.classList.remove('hidden');
-  t.classList.add('visible');
-}
-function hideDeleteToast() {
-  const t = document.getElementById('delete-toast');
-  t.classList.remove('visible');
-  setTimeout(()=>t.classList.add('hidden'), 300);
-}
+function undoDelete() {}
+function showDeleteToast() {}
+function hideDeleteToast() {}
 
 /* ===== GOOGLE BOOKS API ===== */
 const API = 'https://www.googleapis.com/books/v1/volumes';
