@@ -871,7 +871,8 @@ function renderAlleBuecher() {
     const preview = book.note ? book.note.slice(0,80)+(book.note.length>80?'…':'') : '';
     const rc      = {liked:'has-liked',neutral:'has-neutral',disliked:'has-disliked'}[book.rating]||'';
     const cover   = book.coverId ? `<img class="book-list-thumb" src="${book.coverId}" alt="" loading="lazy">` : `<div class="book-list-thumb-ph">📖</div>`;
-    return `<div class="book-list-item ${rc}" id="li-${book.id}" data-author-id="${book.authorId}" data-book-id="${book.id}">
+    const authorInList = S.authors.some(a => !a.hidden && a.name.toLowerCase()===(book._authorName||'').toLowerCase());
+    return `<div class="book-list-item ${rc}" id="li-${book.id}" data-author-id="${book.authorId}" data-book-id="${book.id}" data-author-name="${esc(book._authorName||'')}">
       <div class="book-list-row">
         ${cover}
         <div class="book-list-info">
@@ -896,6 +897,7 @@ function renderAlleBuecher() {
             ${book.isFavorite?'⭐ Favorite':'☆ Favorite'}
           </button>
           <button class="btn-wish bl-wish">🛒 Wishlist</button>
+          ${!authorInList && book._authorName ? `<button class="btn-add-from-search bl-add-author">+ Author</button>` : ''}
           <button class="btn-remove bl-hide">✕ Remove</button>
         </div>
       </div>
@@ -909,6 +911,7 @@ function renderAlleBuecher() {
     if (e.target.closest('.bl-edit'))  { openEditBookModal(authorId, bookId); return; }
     if (e.target.closest('.bl-fav'))   { quickToggleFavorite(authorId, bookId); return; }
     if (e.target.closest('.bl-wish'))  { addBookToWishlist(authorId, bookId); return; }
+    if (e.target.closest('.bl-add-author')) { addAuthorFromSearch(item.dataset.authorName); return; }
     if (e.target.closest('.bl-hide'))  { hideBookFromList(authorId, bookId); return; }
     if (e.target.closest('.book-list-row')) {
       if (item.classList.contains('expanded')) { item.classList.remove('expanded'); return; }
