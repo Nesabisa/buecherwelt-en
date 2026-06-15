@@ -731,11 +731,12 @@ async function addAuthor(name, imgUrl) {
 function renderAutoren() {
   renderInlineSuggestedChips();
   const list = document.getElementById('authors-list');
-  if (!S.authors.length) {
+  const visibleAuthors = S.authors.filter(a => !a.hidden);
+  if (!visibleAuthors.length) {
     list.innerHTML = `<div class="empty"><div class="empty-icon">🍁</div><p>No authors saved yet.</p><p class="empty-hint">Search for an author above!</p></div>`;
     return;
   }
-  list.innerHTML = S.authors.map(author => {
+  list.innerHTML = visibleAuthors.map(author => {
     const books    = S.books[author.id]||[];
     const readCount= books.filter(b=>b.rating).length;
     const av = author.imageUrl
