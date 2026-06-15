@@ -119,27 +119,30 @@ function dedupeBooks(books) {
 
 // Curated international authors per genre
 const GENRE_AUTHORS = {
-  'Self-Help':                 ['James Clear', 'Mark Manson', 'Ryan Holiday'],
-  'Spirituality':              ['Sadhguru', 'Eckhart Tolle', 'Thich Nhat Hanh'],
-  'Body, Mind & Spirit':       ['Sadhguru', 'Eckhart Tolle', 'Deepak Chopra'],
-  'Psychology':                ['Daniel Kahneman', 'Robert Cialdini', 'Jordan Peterson'],
-  'Business':                  ['Malcolm Gladwell', 'Adam Grant', 'Simon Sinek'],
-  'Business & Economics':      ['Malcolm Gladwell', 'Adam Grant', 'Simon Sinek'],
-  'Philosophy':                ['Ryan Holiday', 'Alain de Botton', 'Naval Ravikant'],
-  'History':                   ['Yuval Noah Harari', 'Robert Greene', 'Nassim Taleb'],
-  'Science':                   ['Carl Sagan', 'Richard Dawkins', 'Bill Bryson'],
-  'Biography':                 ['Walter Isaacson', 'Robert Caro', 'David Grann'],
-  'Biography & Autobiography': ['Walter Isaacson', 'David Grann', 'Erik Larson'],
-  'Music':                     ['Rick Rubin', 'Bruce Springsteen', 'Bob Dylan'],
-  'Thriller':                  ['Gillian Flynn', 'Dennis Lehane', 'Lee Child'],
-  'Mystery':                   ['Tana French', 'Michael Connelly', 'James Patterson'],
-  'Mystery & Detective':       ['Tana French', 'Michael Connelly', 'Gillian Flynn'],
-  'Fantasy':                   ['Brandon Sanderson', 'Patrick Rothfuss', 'Joe Abercrombie'],
-  'Science Fiction':           ['Andy Weir', 'Liu Cixin', 'Isaac Asimov'],
-  'Sci-Fi':                    ['Andy Weir', 'Liu Cixin', 'Blake Crouch'],
-  'Horror':                    ['Stephen King', 'Paul Tremblay', 'Josh Malerman'],
-  'Adventure':                 ['Jon Krakauer', 'Sebastian Junger', 'Erik Larson'],
-  'Literary Fiction':          ['Cormac McCarthy', 'Don DeLillo', 'Jeffrey Eugenides'],
+  'Self-Help':                 ['James Clear', 'Mark Manson', 'Ryan Holiday', 'Mel Robbins', 'Brené Brown', 'Robin Sharma', 'Stephen Covey', 'Dale Carnegie', 'Napoleon Hill', 'Atomic Habits'],
+  'Spirituality':              ['Sadhguru', 'Eckhart Tolle', 'Thich Nhat Hanh', 'Deepak Chopra', 'Alan Watts', 'Tara Brach', 'Pema Chödrön', 'Ram Dass', 'Mooji'],
+  'Body, Mind & Spirit':       ['Sadhguru', 'Eckhart Tolle', 'Deepak Chopra', 'Alan Watts', 'Joe Dispenza', 'Wim Hof', 'Gabor Maté', 'Dr. Joe Dispenza', 'Bruce Lipton'],
+  'Psychology':                ['Daniel Kahneman', 'Robert Cialdini', 'Jordan Peterson', 'Viktor Frankl', 'Brené Brown', 'Adam Grant', 'Jonathan Haidt', 'Steven Pinker', 'Dan Ariely', 'Malcolm Gladwell'],
+  'Business':                  ['Malcolm Gladwell', 'Adam Grant', 'Simon Sinek', 'Seth Godin', 'Tim Ferriss', 'Peter Thiel', 'Eric Ries', 'Clayton Christensen', 'Michael Lewis', 'Ray Dalio'],
+  'Business & Economics':      ['Malcolm Gladwell', 'Adam Grant', 'Simon Sinek', 'Seth Godin', 'Tim Ferriss', 'Michael Lewis', 'Peter Thiel', 'Ray Dalio', 'Walter Isaacson', 'Phil Knight'],
+  'Philosophy':                ['Ryan Holiday', 'Alain de Botton', 'Naval Ravikant', 'Jordan Peterson', 'Nassim Taleb', 'Friedrich Nietzsche', 'Albert Camus', 'Epictetus', 'Seneca'],
+  'History':                   ['Yuval Noah Harari', 'Robert Greene', 'Nassim Taleb', 'Doris Kearns Goodwin', 'David McCullough', 'Erik Larson', 'Stephen Ambrose', 'Ron Chernow', 'Antony Beevor'],
+  'Science':                   ['Carl Sagan', 'Richard Dawkins', 'Bill Bryson', 'Neil deGrasse Tyson', 'Stephen Hawking', 'Michio Kaku', 'Sean Carroll', 'Brian Greene', 'Carlo Rovelli'],
+  'Biography':                 ['Walter Isaacson', 'Robert Caro', 'David Grann', 'Erik Larson', 'Doris Kearns Goodwin', 'Ron Chernow', 'Robert Massie', 'Jon Meacham', 'Taylor Branch'],
+  'Biography & Autobiography': ['Walter Isaacson', 'David Grann', 'Erik Larson', 'Tara Westover', 'Michelle Obama', 'Malala Yousafzai', 'Jeannette Walls', 'Cheryl Strayed', 'Matthew McConaughey'],
+  'Music':                     ['Rick Rubin', 'Bruce Springsteen', 'Bob Dylan', 'Keith Richards', 'Questlove', 'Carlos Santana', 'Patti Smith', 'Kim Gordon'],
+  'Thriller':                  ['Gillian Flynn', 'Dennis Lehane', 'Lee Child', 'James Patterson', 'Tana French', 'Michael Connelly', 'David Baldacci', 'Harlan Coben', 'John Grisham', 'Thomas Harris'],
+  'Mystery':                   ['Tana French', 'Michael Connelly', 'James Patterson', 'Agatha Christie', 'Richard Osman', 'Anthony Horowitz', 'Peter May', 'Ann Cleeves', 'Ian Rankin'],
+  'Mystery & Detective':       ['Tana French', 'Michael Connelly', 'Gillian Flynn', 'Agatha Christie', 'Richard Osman', 'Ruth Ware', 'Shari Lapena', 'Lisa Gardner', 'Karin Slaughter'],
+  'Fantasy':                   ['Brandon Sanderson', 'Patrick Rothfuss', 'Joe Abercrombie', 'Robin Hobb', 'Ursula Le Guin', 'N.K. Jemisin', 'Scott Lynch', 'Robert Jordan', 'George R.R. Martin', 'Terry Pratchett'],
+  'Science Fiction':           ['Andy Weir', 'Liu Cixin', 'Isaac Asimov', 'Philip K. Dick', 'Ursula Le Guin', 'Blake Crouch', 'Neal Stephenson', 'William Gibson', 'Kim Stanley Robinson'],
+  'Sci-Fi':                    ['Andy Weir', 'Liu Cixin', 'Blake Crouch', 'Michael Crichton', 'Philip K. Dick', 'Neal Stephenson', 'Kim Stanley Robinson', 'Peter Watts', 'Alastair Reynolds'],
+  'Horror':                    ['Stephen King', 'Paul Tremblay', 'Josh Malerman', 'Shirley Jackson', 'Dean Koontz', 'Grady Hendrix', 'Carmen Maria Machado', 'Joe Hill', 'Thomas Ligotti'],
+  'Adventure':                 ['Jon Krakauer', 'Sebastian Junger', 'Erik Larson', 'David Grann', 'Peter Heller', 'Tim Cahill', 'Mark Adams', 'Roz Savage'],
+  'Literary Fiction':          ['Cormac McCarthy', 'Don DeLillo', 'Jeffrey Eugenides', 'Colson Whitehead', 'Colum McCann', 'Kazuo Ishiguro', 'Zadie Smith', 'Michael Ondaatje', 'Donna Tartt'],
+  'True Crime':                ['Jon Ronson', 'Erik Larson', 'Michelle McNamara', 'David Grann', 'Harold Schechter', 'Ann Rule', 'Sarah Weinman', 'John Douglas'],
+  'Sports & Recreation':       ['Phil Knight', 'Michael Lewis', 'David Epstein', 'Brad Stulberg', 'Steve Magness', 'Matthew Syed'],
+  'Health & Fitness':          ['Giulia Enders', 'Andrew Huberman', 'Peter Attia', 'Rhonda Patrick', 'Matthew Walker', 'Michael Pollan', 'Mark Hyman'],
 };
 
 /* ===== STATE ===== */
@@ -378,7 +381,7 @@ async function fetchBooksForGenre(apiQuery, genreName = '') {
   if (authors) {
     // Query each author individually (OR doesn't work in Google Books API), merge + dedupe
     const results = await Promise.all(
-      authors.slice(0, 3).map(name =>
+      authors.slice(0, 5).map(name =>
         fetchJson(`${API}?q=inauthor:${encodeURIComponent('"'+name+'"')}&orderBy=newest&langRestrict=en&maxResults=15`)
           .then(d => d.items || []).catch(() => [])
       )
