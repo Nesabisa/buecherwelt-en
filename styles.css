@@ -415,6 +415,8 @@ em{font-style:italic;}
 /* ===== WISH BUTTONS (inline) ===== */
 .btn-wish{background:none;border:1.5px solid var(--amber);color:var(--amber);border-radius:9px;padding:6px 12px;font-size:13px;font-weight:500;cursor:pointer;font-family:'Jost',sans-serif;transition:all .15s;}
 .btn-wish:hover{background:var(--amber);color:#fff;}
+.btn-remove{background:none;border:1.5px solid #e0a0a0;color:#c0392b;border-radius:9px;padding:6px 12px;font-size:13px;cursor:pointer;font-family:'Jost',sans-serif;transition:all .15s;}
+.btn-remove:hover{background:#fdf0f0;}
 .btn-wish-sm{background:var(--al);border:1.5px solid var(--amber);color:var(--amber);border-radius:8px;padding:4px 9px;font-size:13px;cursor:pointer;transition:all .15s;flex-shrink:0;}
 .btn-wish-sm:hover,.btn-wish-sm.on-wish{background:var(--amber);color:#fff;border-color:var(--amber);}
 .btr-badge-row{display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0;}

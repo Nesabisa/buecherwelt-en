@@ -160,6 +160,7 @@ const S = {
   suggestions:           [],
   authorBookFilter:      {},
   dismissedAuthors:      new Set(),
+  customSuggestedAuthors: [],
 };
 
 /* ===== FIREBASE ===== */
@@ -301,11 +302,12 @@ function clearInlineAuthorSearch() {
 function renderInlineSuggestedChips() {
   const container = document.getElementById('inline-suggested-chips');
   if (!container) return;
-  const visible = SUGGESTED_AUTHORS.filter(n => !S.dismissedAuthors.has(n));
-  const hasDismissed = S.dismissedAuthors.size > 0;
+  const allSuggestions = [...new Set([...S.customSuggestedAuthors, ...SUGGESTED_AUTHORS])];
+  const visible = allSuggestions.filter(n => !S.dismissedAuthors.has(n));
+  const hasDismissed = S.dismissedAuthors.size > 0 || S.customSuggestedAuthors.some(n => S.dismissedAuthors.has(n));
   container.innerHTML = visible.map(name => {
-    const added = S.authors.some(a => a.name.toLowerCase()===name.toLowerCase());
-    if (added) return `<button class="suggested-chip" disabled data-name="${esc(name)}">✓ ${esc(name)}</button>`;
+    const added = S.authors.some(a => !a.hidden && a.name.toLowerCase()===name.toLowerCase());
+    if (added) return '';
     return `<button class="suggested-chip has-x" data-name="${esc(name)}">
       <span class="chip-name">${esc(name)}</span>
       <span class="chip-sep"></span>
@@ -605,6 +607,7 @@ function doLogin() {
 }
 function startApp() {
   S.dismissedAuthors = loadDismissedAuthors();
+  S.customSuggestedAuthors = loadCustomSuggestions();
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   loadAndRender();
@@ -680,6 +683,23 @@ function handleModalClick(e, modalId) {
 }
 
 async function addAuthor(name, imgUrl) {
+  const existingHidden = S.authors.find(a => a.hidden && a.name.toLowerCase()===name.toLowerCase());
+  if (existingHidden) {
+    existingHidden.hidden = false;
+    showLoading(`Loading books by ${name} …`);
+    try {
+      const books  = await fetchBooksForAuthor(name);
+      const genres = [...new Set(books.flatMap(b=>b.genres))].slice(0,5);
+      const withAuth = books.map(b => ({...b, authorId: existingHidden.id, id:`${existingHidden.id}_${b.googleId}`}));
+      if (genres.length) existingHidden.genres = genres;
+      S.books[existingHidden.id] = withAuth;
+      await col('authors').doc(existingHidden.id).update({ hidden: false, genres: existingHidden.genres });
+      await Promise.all(withAuth.map(b => saveBook(b)));
+    } catch { await col('authors').doc(existingHidden.id).update({ hidden: false }); }
+    hideLoading();
+    renderAutoren(); renderAlleBuecher();
+    return;
+  }
   if (S.authors.some(a => a.name.toLowerCase()===name.toLowerCase())) return;
   clearInlineAuthorSearch();
   showLoading(`Loading books by ${name} …`);
@@ -819,7 +839,23 @@ function renderBookExpand(book, authorName) {
 function renderAlleBuecher() {
   const list = document.getElementById('books-list');
   let all = [];
-  S.authors.forEach(a => dedupeBooks(S.books[a.id]||[]).forEach(b => all.push({...b,_authorName:a.name})));
+  S.authors.forEach(a => {
+    const authorBooks = dedupeBooks(S.books[a.id]||[]).filter(b => !b.hiddenFromList);
+    const globalSeen  = new Map();
+    authorBooks.forEach(b => {
+      const k = normTitle(b.title);
+      const ex = globalSeen.get(k);
+      if (!ex || (b.rating && !ex.rating)) globalSeen.set(k, b);
+    });
+    [...globalSeen.values()].forEach(b => all.push({...b, _authorName: a.name}));
+  });
+  const titleSeen = new Map();
+  all.forEach(b => {
+    const k = normTitle(b.title);
+    const ex = titleSeen.get(k);
+    if (!ex || (b.rating && !ex.rating)) titleSeen.set(k, b);
+  });
+  all = [...titleSeen.values()];
   if (S.bookFilter==='gelesen')   all = all.filter(b=>b.rating);
   if (S.bookFilter==='favoriten') all = all.filter(b=>b.isFavorite);
   all.sort((a,b) => { if(b.isFavorite!==a.isFavorite) return b.isFavorite?1:-1; if(!!b.rating!==!!a.rating) return b.rating?1:-1; return a._authorName.localeCompare(b._authorName); });
@@ -853,6 +889,8 @@ function renderAlleBuecher() {
           <button class="btn-fav-toggle ${book.isFavorite?'is-fav':''} bl-fav">
             ${book.isFavorite?'⭐ Favorite':'☆ Favorite'}
           </button>
+          <button class="btn-wish bl-wish">🛒 Wishlist</button>
+          <button class="btn-remove bl-hide">✕ Remove</button>
         </div>
       </div>
     </div>`;
@@ -864,6 +902,8 @@ function renderAlleBuecher() {
     const bookId   = item.dataset.bookId;
     if (e.target.closest('.bl-edit'))  { openEditBookModal(authorId, bookId); return; }
     if (e.target.closest('.bl-fav'))   { quickToggleFavorite(authorId, bookId); return; }
+    if (e.target.closest('.bl-wish'))  { addBookToWishlist(authorId, bookId); return; }
+    if (e.target.closest('.bl-hide'))  { hideBookFromList(authorId, bookId); return; }
     if (e.target.closest('.book-list-row')) {
       if (item.classList.contains('expanded')) { item.classList.remove('expanded'); return; }
       document.querySelectorAll('.book-list-item.expanded').forEach(i=>i.classList.remove('expanded'));
@@ -871,6 +911,15 @@ function renderAlleBuecher() {
       lazyLoadListDescription(authorId, bookId, item);
     }
   };
+}
+
+function hideBookFromList(authorId, bookId) {
+  const book = getBook(authorId, bookId);
+  if (!book) return;
+  book.hiddenFromList = true;
+  updateBook(bookId, { hiddenFromList: true });
+  renderAlleBuecher();
+  renderDiscover();
 }
 
 async function lazyLoadListDescription(authorId, bookId, item) {
@@ -1032,6 +1081,23 @@ function resetDismissedAuthors() {
   S.dismissedAuthors.clear();
   saveDismissedAuthors();
   renderInlineSuggestedChips();
+}
+function loadCustomSuggestions() {
+  try { return JSON.parse(localStorage.getItem(`bw_custom_sug_${S.code}`) || '[]'); }
+  catch { return []; }
+}
+function saveCustomSuggestions() {
+  localStorage.setItem(`bw_custom_sug_${S.code}`, JSON.stringify(S.customSuggestedAuthors));
+}
+function addAuthorToSuggestions(name) {
+  closeDiscDetail();
+  if (!S.customSuggestedAuthors.includes(name)) {
+    S.customSuggestedAuthors.unshift(name);
+    saveCustomSuggestions();
+    renderInlineSuggestedChips();
+  }
+  switchTab('autoren');
+  flashWishBtn(`${name} added to suggestions ✓`);
 }
 
 function getDiscoverGenres() {
@@ -1294,7 +1360,8 @@ function renderDiscDetailActions(book, isNew) {
         <button class="disc-detail-btn-primary" data-author="${esc(authorName)}" onclick="addAuthorFromDisc(this)">📚 Add author</button>
         <button class="disc-detail-btn-amber"
           data-gid="${gidE}" data-title="${titleE}" data-author="${esc(authorName)}" data-cover="${coverE}" data-year="${yearE}"
-          onclick="addSingleBookFromDisc(this)">📖 Add this book</button>`;
+          onclick="addSingleBookFromDisc(this)">📖 Add this book</button>
+        <button class="disc-detail-btn-sage" data-author="${esc(authorName)}" onclick="addAuthorToSuggestions(this.dataset.author)">⭐ Add to suggestions</button>`;
     } else { el.innerHTML = ''; }
   }
 }
