@@ -1578,7 +1578,7 @@ function renderMerkliste() {
       ? `<img class="wish-cover" src="${item.coverId}" alt="" loading="lazy">`
       : `<div class="wish-cover-ph">📖</div>`;
     const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(item.title+' '+authors+' buy')}`;
-    return `<div class="wish-item">
+    return `<div class="wish-item" data-gid="${esc(item.googleId||'')}" onclick="toggleWishDesc(this,event)">
       ${cover}
       <div class="wish-info">
         <div class="wish-title">${esc(item.title)}</div>
@@ -1586,10 +1586,30 @@ function renderMerkliste() {
       </div>
       <div class="wish-btns">
         <a class="wish-buy" href="${searchUrl}" target="_blank" rel="noopener" title="Search online">🔍 Buy</a>
-        <button class="wish-del" data-id="${item.id}" onclick="removeFromWishlist(this.dataset.id)" title="Remove">✕</button>
+        <button class="wish-del" data-id="${esc(item.id)}" onclick="event.stopPropagation();removeFromWishlist(this.dataset.id)" title="Remove">✕</button>
       </div>
+      <div class="wish-desc">Loading …</div>
     </div>`;
   }).join('');
+}
+
+async function toggleWishDesc(item, e) {
+  if (e.target.closest('.wish-btns') || e.target.closest('a')) return;
+  const descEl = item.querySelector('.wish-desc');
+  if (!descEl) return;
+  if (item.classList.contains('expanded')) {
+    item.classList.remove('expanded'); return;
+  }
+  item.classList.add('expanded');
+  if (descEl.dataset.loaded) return;
+  const gid = item.dataset.gid;
+  if (!gid) { descEl.textContent = 'No description available.'; descEl.dataset.loaded = '1'; return; }
+  try {
+    const data = await fetchJson(`${API}/${gid}?fields=volumeInfo(description)`);
+    const desc = stripHtml(data.volumeInfo?.description || '');
+    descEl.textContent = desc || 'No description available.';
+  } catch { descEl.textContent = 'Could not load description.'; }
+  descEl.dataset.loaded = '1';
 }
 
 /* ===== STATISTIK ===== */

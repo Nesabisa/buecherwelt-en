@@ -407,6 +407,10 @@ em{font-style:italic;}
 .wish-buy{background:var(--sl);color:var(--sd);border:none;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Jost',sans-serif;text-decoration:none;display:inline-block;white-space:nowrap;}
 .wish-del{background:none;border:1.5px solid var(--border);color:var(--tl);border-radius:8px;padding:4px 9px;font-size:12px;cursor:pointer;transition:all .15s;}
 .wish-del:hover{border-color:#c0392b;color:#c0392b;}
+.wish-item{cursor:pointer;}
+.wish-item.expanded{flex-wrap:wrap;align-items:flex-start;}
+.wish-desc{width:100%;font-size:12px;color:var(--tm);line-height:1.5;margin-top:8px;display:none;}
+.wish-item.expanded .wish-desc{display:block;}
 
 /* ===== WISH BUTTONS (inline) ===== */
 .btn-wish{background:none;border:1.5px solid var(--amber);color:var(--amber);border-radius:9px;padding:6px 12px;font-size:13px;font-weight:500;cursor:pointer;font-family:'Jost',sans-serif;transition:all .15s;}
