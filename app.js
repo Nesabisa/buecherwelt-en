@@ -1135,13 +1135,20 @@ function addAuthorToSuggestions(name) {
 }
 
 function getDiscoverGenres() {
-  const fromBooks = new Set();
-  S.authors.forEach(a => (S.books[a.id]||[]).forEach(b =>
-    (b.genres||[]).filter(g=>!SKIP_GENRES.has(g) && !isGermanGenre(g)).forEach(g => fromBooks.add(g))
-  ));
-  const defaults = ['NYT-Bestseller','Romance','Romantasy','Thriller','Mystery','Fantasy','Sci-Fi','Horror','Historical Fiction','Literary Fiction','Self-Help','Psychology','Business','Spirituality','Biography','History','Science','Adventure'];
-  const all = [...fromBooks, ...defaults.filter(d => !fromBooks.has(d))];
-  return [...new Set(all)].slice(0, 18);
+  // Count genres from liked books first (score 2), then all books (score 1)
+  const genreScore = {};
+  S.authors.filter(a => !a.hidden).forEach(a => {
+    (S.books[a.id]||[]).filter(b => !b.hiddenFromList).forEach(b => {
+      const weight = b.rating === 'liked' ? 2 : 1;
+      (b.genres||[]).filter(g => !SKIP_GENRES.has(g) && !isGermanGenre(g) && isKnownGenre(g))
+        .forEach(g => { genreScore[g] = (genreScore[g]||0) + weight; });
+    });
+  });
+  const fromRatings = Object.entries(genreScore).sort((a,b) => b[1]-a[1]).map(([g]) => g);
+  const defaults = ['NYT-Bestseller','Thriller','Mystery','Fantasy','Romance','Romantasy','Sci-Fi','Horror','Historical Fiction','Literary Fiction','Self-Help','Psychology','Business','Spirituality','Biography','History','Science','Adventure'];
+  const seen = new Set(fromRatings);
+  const all = [...fromRatings, ...defaults.filter(d => !seen.has(d))];
+  return all.slice(0, 18);
 }
 
 function getSuggestedAuthorsForDropdown() {
